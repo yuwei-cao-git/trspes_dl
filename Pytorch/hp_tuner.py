@@ -1,9 +1,10 @@
 from __future__ import print_function
 
 import os
-import sys
+# import sys
 import warnings
-
+import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import optuna
 import numpy as np
@@ -20,7 +21,7 @@ from tqdm import tqdm
 from models.dgcnn import DGCNN
 from models.dgcnn_extended import DGCNNEx
 from utils.tools import create_comp_csv, delete_files
-from utils.train import train, test
+# from utils.train import train, test
 from utils.tools import IOStream, PointCloudsInPickle, _init_, model_args
 from utils.augmentation import AugmentPointCloudsInPickle
 
@@ -218,7 +219,7 @@ def objective(trial):
                 test_pred.append(pred_np)
             else:
                 test_np = test_np[np.newaxis,:]
-                tet_pred.append(pred_np)
+                test_pred.append(pred_np)
 
         # Concatenate true/pred
         test_true = np.concatenate(test_true)

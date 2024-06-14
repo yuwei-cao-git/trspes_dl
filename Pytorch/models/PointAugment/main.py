@@ -77,10 +77,10 @@ if __name__ == "__main__":
         "augmentor": False,
         "batch_size": 10,  # batch size
         "train_weights": class_weights, # training weights
-        "train_path": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\train\datasets\fps",
-        "train_pickle": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\train\plots_comp_2.pkl",
-        "test_path": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\val\datasets\fps",
-        "test_pickle": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\val\plots_comp_2.pkl",
+        "train_path": r"../data/RMF_laz/train\datasets/7168",
+        "train_pickle": r"../data/RMF_laz/train/plots_comp_2.pkl",
+        "test_path": r"../data/RMF_laz/val\datasets/7168",
+        "test_pickle": r"../data/RMF_laz/val/plots_comp_2.pkl",
         "augment": False, # augment
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes

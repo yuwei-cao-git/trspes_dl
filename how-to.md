@@ -274,7 +274,7 @@ The above command does not compress the data. If you believe that this is approp
 ## Step 3: Preparing your virtual environment
 
 ### Python
-1. load a pytho module
+1. load a python module
    ```
     [name@server ~]$ module avail python
     # or a specific version

@@ -396,10 +396,10 @@ def test(params, io, testset):
         raise Exception("Model Not Implemented")
         
     # Data Parallel
-    model = nn.DataParallel(model, device_ids=list(range(0, args["n_gpus"])))
+    model = nn.DataParallel(model, device_ids=list(range(0, params["n_gpus"])))
 
     # Load Pretrained Model
-    model.load_state_dict(torch.load(args["model_path"]))
+    model.load_state_dict(torch.load(params["model_path"]))
     
     # Setup for Testing
     model = model.eval()
@@ -424,7 +424,7 @@ def test(params, io, testset):
 
         # Append true/pred
         test_true.append(label.cpu().numpy())
-        test_pred.append(pred.detach().cpu().numpy())
+        test_pred.append(output.detach().cpu().numpy())
 
     # Concatenate true/pred
     test_true = np.concatenate(test_true)

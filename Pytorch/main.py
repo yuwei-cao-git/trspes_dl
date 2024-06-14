@@ -57,20 +57,20 @@ def main(params):
         train(params, io, trainloader, testloader)
         torch.cuda.empty_cache()
     else:
-        test(params, io, testlaoder)
+        test(params, io, testloader)
         
 
 if __name__ == "__main__":
     # args = model_args()
     # Set up Model Params
     params = {
-        "exp_name": "dgcnn_extended_7168",  # experiment name
+        "exp_name": "dgcnn_7168",  # experiment name
         "model": "dgcnn",  # model
         "batch_size": 8,  # batch size
-        "train_path": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\train\trainingsets\fps",
-        "train_pickle": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\train\plot_comp.pkl",
-        "test_path": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\val\trainingsets\fps",
-        "test_pickle": r"D:\MurrayBrent\data\RMF_ITD\plots\plot_laz\val\plot_comp.pkl",
+        "train_path": r"../data/rmf_ITD/plots/plot_laz/train/7168",
+        "train_pickle": r"../data/rmf_laz/train/plot_comp.pkl",
+        "test_path": r"../data/rmf_laz/val/7168",
+        "test_pickle": r"../data/rmf_laz/val/plot_comp.pkl",
         "augment": True, # augment
         "n_augs": 1, # number of augmentations
         "classes": ["BF", "BW", "CE", "LA", "PT", "PJ", "SB"],  # classes
