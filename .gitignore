@@ -1,0 +1,9 @@
+*.o
+*.pyc
+
+*.log
+log/*
+
+data/
+output/
+checkpoints/

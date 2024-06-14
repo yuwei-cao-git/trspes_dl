@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,10 +6,10 @@ import torch.nn.functional as F
 
 def mat_loss(trans):
     d = trans.size()[1]
-    I = troch.eye(d)[None, :, :]
+    I = torch.eye(d)[None, :, :]
     if trans.is_cuda:
         I = I.cuda()
-    loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2,1)) - I, dim(1,2)))
+    loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2,1)) - I, torch.dim(1,2)))
     
     return loss
 
