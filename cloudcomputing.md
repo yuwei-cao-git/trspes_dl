@@ -28,7 +28,7 @@
    2. add new ssh keys (local machine and cluster)in the github
    3. create repository and coding on local machine:
         ```
-        # first tiem
+        # first time
         git clone git@github.com:yuwei-cao-git/trspes_dl.git
         # after make changes
         git add *
