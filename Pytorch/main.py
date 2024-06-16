@@ -67,15 +67,15 @@ if __name__ == "__main__":
         "exp_name": "dgcnn_7168",  # experiment name
         "model": "dgcnn",  # model
         "batch_size": 8,  # batch size
-        "train_path": r"../data/rmf_ITD/plots/plot_laz/train/7168",
-        "train_pickle": r"../data/rmf_laz/train/plot_comp.pkl",
-        "test_path": r"../data/rmf_laz/val/7168",
-        "test_pickle": r"../data/rmf_laz/val/plot_comp.pkl",
+        "train_path": r"../data/rmf_laz/train",
+        "train_pickle": r"../data/rmf_laz/train/plots_comp.pkl",
+        "test_path": r"../data/rmf_laz/val",
+        "test_pickle": r"../data/rmf_laz/val/plots_comp.pkl",
         "augment": True, # augment
         "n_augs": 1, # number of augmentations
         "classes": ["BF", "BW", "CE", "LA", "PT", "PJ", "SB"],  # classes
         "n_gpus": torch.cuda.device_count(), # number of gpus
-        "epochs": 300,  # total epochs
+        "epochs": 10,  # total epochs, 300, test with 10
         "optimizer": "adam",  # optimizer
         "lr": 1e-6,  # learning rate
         "adaptive_lr": True,  # adaptive learning rate

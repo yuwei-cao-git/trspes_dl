@@ -1,7 +1,7 @@
 import os
 import random
 import warnings
-
+import wandb
 
 import numpy as np
 import pandas as pd
@@ -18,12 +18,22 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 from utils.tools import create_comp_csv, delete_files, variable_df, write_las, plot_3d, plot_2d
-from utils.send_telegram import send_telegram
+# import torch.profiler
+# from utils.send_telegram import send_telegram
 
 warnings.filterwarnings("ignore")
-
+wandb.login()
 
 def train(params, io, trainset, testset):
+    # log using wandb
+    run = wandb.init(
+        project="tree_species_composition_dl_cc",
+        config={
+            "learning_rate_a": params["lr_a"],
+            "learning_rate_c": params["lr_c"],
+            "epoch": params["epochs"],
+        },
+    )
     # Run model
     device = torch.device("cuda" if params["cuda"] else "cpu")
     exp_name = params["exp_name"]
@@ -111,7 +121,7 @@ def train(params, io, trainset, testset):
     ):
         # augmentor.train()
         # classifier.train()
-        send_telegram(f"Epoch: {epoch}")
+        # send_telegram(f"Epoch: {epoch}")
         trainset_idx = list(range(len(trainset)))
         random.shuffle(trainset_idx)
         rem = len(trainset_idx) % params["batch_size"]
@@ -302,9 +312,7 @@ def train(params, io, trainset, testset):
 
         # print and save losses and r2
         if params["augmentor"]:
-            io.cprint(
-                f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}"
-            )
+            io.cprint(f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
 
             # Create output Dataframe
             out_dict = {"epoch": [epoch + 1],
@@ -313,17 +321,28 @@ def train(params, io, trainset, testset):
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
+            wandb.log({"epoch": epoch+1,
+                       "aug_loss": train_loss_a,
+                       "class_loss": train_loss_c,
+                       "train_r2": train_r2,
+                       "val_loss": test_loss,
+                       "val_r2": val_r2,
+                       })
         else:
-            io.cprint(
-                f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}"
-            )
-
+            io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
             # Create output Dataframe
             out_dict = {"epoch": [epoch + 1],
                         "class_loss": [train_loss_c],
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
+            wandb.log({"epoch": epoch+1,
+                       "class_loss": train_loss_c,
+                       "train_r2": train_r2,
+                       "val_loss": test_loss,
+                       "val_r2": val_r2,
+                       })
+            
         out_df = pd.DataFrame.from_dict(out_dict)
         
         if epoch + 1 > 1:
@@ -337,9 +356,11 @@ def train(params, io, trainset, testset):
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             if params["augmentor"]:
-                send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
             else:
-                send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
             torch.save(
                 classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
             )
@@ -371,9 +392,17 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler1_a.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                     )
+                    wandb.log({
+                        "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
+                        "Trigger Times": triggertimes,
+                    })
                 io.cprint(
                     f"Classifier LR: {scheduler1_c.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                 )
+                wandb.log({
+                        "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
+                        "Trigger Times": triggertimes,
+                    })
             else:
                 if params["augmentor"]:
                     scheduler2_a.step()
@@ -382,9 +411,17 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler2_a.optimizer.param_groups[0]['lr']}, Scheduler: Step"
                     )
+                    wandb.log({
+                        "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
+                    })
                 io.cprint(
                     f"Classifier LR: {scheduler2_c.optimizer.param_groups[0]['lr']}, Scheduler: Step"
-                )                             
+                )
+                wandb.log({
+                    "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
+
+                })
+    wandb.finish()                             
 
 def test(params, io, testset):
     device = torch.device("cuda" if params["cuda"] else "cpu")

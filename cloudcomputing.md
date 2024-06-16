@@ -63,8 +63,29 @@
 
 
 5. Setting the virtualenv in local machine
+- create env:
    
+   ```
+   $ sudo apt update && sudo apt upgrade -y
+   $ pip3 install virtualenv
+   $ virtualenv -p /usr/bin/python3 venv
+   ```
+- install packages
+```
+pip3 install torch torchvision torchaudio scikit-learn tqdm
+pip install ...
+```
+- test with code
 
+- export env requirement
+   `pip freeze --local > requirements.txt`
+
+6. Setting the virtualenv in remote machine
+```
+$ module purge
+$ module load python/3.7.9 scipy-stack
+
+```
 6. Use `$SLURM_TMPDIR` when runing a job!
 > using **git** to download code, specifically:
 ```
@@ -73,5 +94,11 @@ git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trespecs_dl
 mkdir -p data/output
 tar -xy $project/data/*.tar -C ./data/
+pip install --no-index wandb
 ``` 
 7. Submit jobs
+
+wandb offline
+after finish:
+wandb sync /home/yuwei-linux/code/trspes_dl/Pytorch/models/PointAugment/wandb/offline-run-20240614_203702-k8f101c2
+python wandb-test.py

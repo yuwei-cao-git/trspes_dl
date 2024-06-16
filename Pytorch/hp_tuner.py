@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-# import sys
+import sys
 import warnings
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -21,7 +21,7 @@ from tqdm import tqdm
 from models.dgcnn import DGCNN
 from models.dgcnn_extended import DGCNNEx
 from utils.tools import create_comp_csv, delete_files
-# from utils.train import train, test
+from utils.train import train, test
 from utils.tools import IOStream, PointCloudsInPickle, _init_, model_args
 from utils.augmentation import AugmentPointCloudsInPickle
 

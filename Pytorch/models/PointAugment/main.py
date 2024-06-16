@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import warnings
+import wandb
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -16,7 +17,7 @@ from utils.tools import (
 )
 from utils.augmentation import AugmentPointCloudsInPickle
 from utils.train import test, train
-from utils.send_telegram import send_telegram
+# from utils.send_telegram import send_telegram
 
 warnings.filterwarnings("ignore")
 
@@ -72,20 +73,20 @@ if __name__ == "__main__":
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
     class_weights = [1/(100*n/11057) for n in n_samples]
     params = {
-        "exp_name": "pn2_pointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
+        "exp_name": "pn2_nopointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
         "model": "pn2",  # model
         "augmentor": False,
         "batch_size": 10,  # batch size
         "train_weights": class_weights, # training weights
-        "train_path": r"../data/RMF_laz/train\datasets/7168",
-        "train_pickle": r"../data/RMF_laz/train/plots_comp_2.pkl",
-        "test_path": r"../data/RMF_laz/val\datasets/7168",
-        "test_pickle": r"../data/RMF_laz/val/plots_comp_2.pkl",
+        "train_path": r"../../../data/rmf_laz/train",
+        "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
+        "test_path": r"../../../data/rmf_laz/val",
+        "test_pickle": r"../../../data/rmf_laz/val/plots_comp.pkl",
         "augment": False, # augment
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
-        "epochs": 100,  # total epochs
+        "epochs": 10,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate
@@ -105,7 +106,7 @@ if __name__ == "__main__":
 
     mn = params["exp_name"]
     
-    send_telegram(f"Starting {mn}")
+    #send_telegram(f"Starting {mn}")
     main(params)
     # try:
     #     main(params)

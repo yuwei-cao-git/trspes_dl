@@ -1,8 +1,9 @@
-#import glob
+import glob
 import os
 import random
-#from datetime import datetime
-#from pathlib import Path
+from datetime import datetime
+from pathlib import Path
+import ast
 
 import laspy
 import numpy as np
@@ -194,7 +195,7 @@ class AugmentPointCloudsInPickle(Dataset):
         coords = rotate_points(aug_coords)
 
         # Get Target
-        target = pickle_idx["perc_specs"].item()
+        target =  ast.literal_eval(pickle_idx["perc_specs"].item())
         target = [float(i) for i in target] # convert items in target to float
 
         coords = torch.from_numpy(coords).float()

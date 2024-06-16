@@ -1,10 +1,6 @@
 # Adapted from https://github.com/WangYueFt/dgcnn/tree/master/pytorch
 
-# Notes
-# line 68/98 in trian see if loss is correct
-
-# import os
-
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -12,7 +8,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.metrics import r2_score
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
-# from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from models.dgcnn import DGCNN
 from models.dgcnn_extended import DGCNNEx

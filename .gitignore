@@ -3,7 +3,14 @@
 
 *.log
 log/*
+__pycache__
+wandb
 
 data/
+.csv
+
 output/
 checkpoints/
+
+.png
+pretrained/
