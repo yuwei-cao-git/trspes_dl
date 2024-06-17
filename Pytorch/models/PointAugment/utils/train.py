@@ -30,7 +30,7 @@ def train(params, io, trainset, testset):
         project="tree_species_composition_dl_cc",
         config={
             "init_learning_rate_a": params["lr_a"],
-            "init_learning_rate_c": params["lr_c"],
+            "inlearning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
         },
     )
