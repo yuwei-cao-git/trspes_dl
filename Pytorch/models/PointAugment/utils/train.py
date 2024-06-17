@@ -29,8 +29,8 @@ def train(params, io, trainset, testset):
     run = wandb.init(
         project="tree_species_composition_dl_cc",
         config={
-            "learning_rate_a": params["lr_a"],
-            "learning_rate_c": params["lr_c"],
+            "init_learning_rate_a": params["lr_a"],
+            "init_learning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
         },
     )
@@ -137,6 +137,7 @@ def train(params, io, trainset, testset):
         aug_pred = []
         train_true = []
         j=0
+        wandb.log({"epoch": epoch+1})
         
         for data, label in tqdm(
             train_loader, desc="Training Total: ", leave=False, colour="cyan"
@@ -246,12 +247,15 @@ def train(params, io, trainset, testset):
             train_r2 = float(aug_r2 + true_r2) / 2
         else:
             train_r2 = true_r2
-        
+        wandb.log({"train_r2": train_r2})
+
         # Get average loss'
         if params["augmentor"]:
             train_loss_a = float(train_loss_a) / count
+            wandb.log({"aug_loss": train_loss_a})
         train_loss_c = float(train_loss_c) / count
-
+        wandb.log({"class_loss": train_loss_c})
+        
         # Set up Validation
         classifier.eval()
         with torch.no_grad():
@@ -306,9 +310,10 @@ def train(params, io, trainset, testset):
 
             # Calculate R2
             val_r2 = r2_score(test_true.flatten(), test_pred.flatten().round(2))
-
+            wandb.log({"val_r2": val_r2})
             # get average test loss
             test_loss = float(test_loss) / count
+            wandb.log({"val_loss": test_loss})
 
         # print and save losses and r2
         if params["augmentor"]:
@@ -321,13 +326,7 @@ def train(params, io, trainset, testset):
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
-            wandb.log({"epoch": epoch+1,
-                       "aug_loss": train_loss_a,
-                       "class_loss": train_loss_c,
-                       "train_r2": train_r2,
-                       "val_loss": test_loss,
-                       "val_r2": val_r2,
-                       })
+            wandb.log({"aug_loss": train_loss_a})
         else:
             io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
             # Create output Dataframe
@@ -336,12 +335,6 @@ def train(params, io, trainset, testset):
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
-            wandb.log({"epoch": epoch+1,
-                       "class_loss": train_loss_c,
-                       "train_r2": train_r2,
-                       "val_loss": test_loss,
-                       "val_r2": val_r2,
-                       })
             
         out_df = pd.DataFrame.from_dict(out_dict)
         
