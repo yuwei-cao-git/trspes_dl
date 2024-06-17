@@ -21,7 +21,7 @@ virtualenv --no-download $SLURM_TMPDIR/venv
 source $SLURM_TMPDIR/venv/bin/activate
 
 pip install --no-index --upgrade pip
-pip install --no-index -r $project/requirements.txt
+pip install --no-index -r $sourcedir/requirements.txt
 EOF
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -51,9 +51,9 @@ git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trespecs_dl
 
 data transfer
-mkdir -p data/output
+mkdir -p data
 # extract an archive to a different directory, the ‘-C’ option is followed by the destination path
-tar -xf $project/data/*.tar -C ./data/
+tar -xf $project/data/rmf_laz.tar -C ./data/
 
 # Log experiment variables
 wandb offline
