@@ -91,12 +91,22 @@ $ module load python/3.7.9 scipy-stack
 > using **git** to download code, specifically:
 ```
 cd $SLURM_TEMDIR
+mkdir work
+cd work
 git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trespecs_dl
 mkdir -p data/output
 tar -xy $project/data/*.tar -C ./data/
+
 pip install --no-index wandb
 ``` 
+
+$ salloc --time=1:0:0 --mem-per-cpu=3G --ntasks=1 --account=def-someuser
+salloc: Granted job allocation 1234567
+$ ...             # do some work
+$ exit            # terminate the allocation
+salloc: Relinquishing job allocation 1234567
+
 7. Submit jobs
 
 wandb offline

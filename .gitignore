@@ -7,10 +7,12 @@ __pycache__
 wandb
 
 data/
-.csv
+*.csv
+*.laz
 
 output/
 checkpoints/
 
 .png
 pretrained/
+*.t7
