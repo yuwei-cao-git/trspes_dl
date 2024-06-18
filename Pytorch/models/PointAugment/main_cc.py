@@ -9,13 +9,9 @@ from utils.tools import (
     IOStream,
     PointCloudsInPickle,
     _init_,
-    delete_files,
-    notifi,
-    plot_stats,
 )
 from utils.augmentation import AugmentPointCloudsInPickle
 from utils.train_cc import test, train
-import argparse
 warnings.filterwarnings("ignore")
 
 def main(params):

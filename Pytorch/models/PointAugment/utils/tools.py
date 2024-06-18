@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
-from plyer import notification
+#from plyer import notification
 from sklearn.metrics import confusion_matrix, mean_squared_error, r2_score
 from torch.utils.data import DataLoader, Dataset
 
@@ -462,10 +462,11 @@ def concat_df(df_list):
     df = pd.concat(df_list, ignore_index=True)
     return df
 
-
+'''
 def notifi(title, message):
     # Creates a pop-up notification
     notification.notify(title=title, message=message, timeout=10)
+'''
     
     
 def create_comp_csv(y_true, y_pred, classes, filepath):
