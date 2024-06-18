@@ -476,7 +476,7 @@ def train(params, io, trainset, testset):
         wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
     if rank == 0:
-        io.cprint(f"Total Time {tac-tic} sec. ({(tac-tic)/params["epochs"]} sec./epoch)")
+        io.cprint(f"Total Time {tac-tic} sec. {(tac-tic) / params["epochs"]} sec./epoch")
         wandb.log({"Total Time": tac-tic})
     wandb.finish()                             
 
