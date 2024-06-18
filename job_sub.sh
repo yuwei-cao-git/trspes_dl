@@ -53,7 +53,7 @@ cd trspes_dl
 # data transfer
 mkdir -p data
 # extract an archive to a different directory, the ‘-C’ option is followed by the destination path
-tar -xf $project/data/rmf_laz.tar -C ./data/
+tar -xf $project/data/rmf_laz.tar -C $SLURM_TEMDIR/work/trspes_dl/data/
 
 # Log experiment variables
 wandb offline
@@ -63,7 +63,7 @@ wandb offline
 srun python $SLURM_TEMDIR/work/trspes_dl/Pytorch/models/PointAugment/main_cc.py --init_method tcp://$MASTER_ADDR:3456
 
 cd $SLURM_TMPDIR
-tar -cf $project/Pytorch/models/PointAugment/checkpoints/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*
-tar -cf $project/Pytorch/models/PointAugment/wandb/wandblogs.tar work/trspes_dl/Pytorch/models/PointAugment/wandb/*
+tar -cf $project/Pytorch/models/PointAugment/checkpoints/checkpoints.tar $SLURM_TEMDIR/work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*
+tar -cf $project/Pytorch/models/PointAugment/wandb/wandblogs.tar $SLURM_TEMDIR/work/trspes_dl/Pytorch/models/PointAugment/wandb/*
 
 echo "end"
