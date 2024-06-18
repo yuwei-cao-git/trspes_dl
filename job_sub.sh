@@ -12,15 +12,11 @@
 
 # Load python module, and additional required modules
 module purge 
-module load python/3.10 cuda cudnn scipy-stack
+module load python/3.10 scipy-stack cuda cudnn
 
 srun --tasks-per-node=1 bash << EOF
-# Create a new envirionmnet
 virtualenv --no-download $SLURM_TMPDIR/venv
-
-# Load an existing environment
 source $SLURM_TMPDIR/venv/bin/activate
-
 pip install --no-index --upgrade pip
 pip install --no-index -r ~/code/trspes_dl/requirements.txt
 pip install laspy[laszip]
