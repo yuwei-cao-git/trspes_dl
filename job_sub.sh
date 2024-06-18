@@ -10,18 +10,25 @@
 #SBATCH --mail-user=yuwei.cao@ubc.ca    # Request email notifications
 #SBATCH --mail-type=ALL
 
+# code transfer
+cd $SLURM_TMPDIR
+mkdir work
+cd work
+git clone git@github.com:yuwei-cao-git/trspes_dl.git
+cd ./trspes_dl
+echo "codes finished cloned"
+
+# data transfer
+mkdir -p data
+# extract an archive to a different directory, the ‘-C’ option is followed by the destination path
+tar -xf $project/data/rmf_laz.tar -C ./data
+ls $SLURM_TMPDIR/work/trspes_dl
+echo "data transfered"
+
 # Load python module, and additional required modules
 module purge 
 module load python/3.10 scipy-stack
-
-srun --tasks-per-node=1 bash << EOF
-virtualenv --no-download $SLURM_TMPDIR/env
-source $SLURM_TMPDIR/env/bin/activate
-pip install --no-index --upgrade pip
-pip install --no-index torch torchvision torchtext torchaudio
-pip install --no-index -r ~/code/trspes_dl/requirements.txt
-pip install laspy[laszip]
-EOF
+source ~/venv/bin/activate
 
 # Set environment variables
 export NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
@@ -31,22 +38,6 @@ export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MAST
 echo "r$SLURM_NODEID master: $MASTER_ADDR"
 echo "r$SLURM_NODEID Launching test dl cc script"
 # 3mins so far
-
-# code transfer
-cd $SLURM_TMPDIR
-mkdir work
-cd work
-git clone git@github.com:yuwei-cao-git/trspes_dl.git
-cd ./trspes_dl
-echo "codes finished cloned"
-ls
-
-# data transfer
-mkdir -p data
-# extract an archive to a different directory, the ‘-C’ option is followed by the destination path
-tar -xf $project/data/rmf_laz.tar -C ./data
-ls $SLURM_TMPDIR/work/trspes_dl
-echo "data transfered"
 
 # Log experiment variables
 wandb offline
