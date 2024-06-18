@@ -16,7 +16,6 @@ numpy==1.26.4+computecanada
 optuna==3.6.1+computecanada
 pathlib==1.0.1+computecanada
 Pillow_SIMD==9.0.0.post1+computecanada
-plyer==2.1.0
 protobuf==4.25.2+computecanada
 scikit_learn==1.4.2+computecanada
 seaborn==0.13.2+computecanada
