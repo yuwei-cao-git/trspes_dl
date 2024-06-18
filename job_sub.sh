@@ -23,6 +23,8 @@ source $SLURM_TMPDIR/venv/bin/activate
 
 pip install --no-index --upgrade pip
 pip install --no-index -r ~/code/trspes_dl/requirements.txt
+pip install laspy[laszip]
+pip install plyer
 EOF
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
@@ -64,7 +66,7 @@ wandb offline
 
 #Run python script
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
-python ./Pytorch/models/PointAugment/main_cc.py --init_method tcp://$MASTER_ADDR:3456
+python Pytorch/models/PointAugment/main_cc.py --init_method tcp://$MASTER_ADDR:3456
 
 cd $SLURM_TMPDIR
 tar -cf ~/scratch/output/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints

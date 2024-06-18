@@ -86,6 +86,16 @@ pip install ...
 $ module purge
 $ module load python/3.7.9 scipy-stack
 
+[name@server ~]$ module load python/3.10
+[name@server ~]$ ENVDIR=/tmp/$RANDOM
+[name@server ~]$ virtualenv --no-download $ENVDIR
+[name@server ~]$ source $ENVDIR/bin/activate
+[name@server ~]$ pip install --no-index --upgrade pip
+[name@server ~]$ pip install --no-index 
+[name@server ~]$ pip freeze --local > requirements.txt
+[name@server ~]$ deactivate
+[name@server ~]$ rm -rf $ENVDIR
+
 ```
 6. Use `$SLURM_TMPDIR` when runing a job!
 > using **git** to download code, specifically:
