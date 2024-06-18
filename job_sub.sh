@@ -48,7 +48,8 @@ wandb offline
 
 #Run python script
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
-python ./Pytorch/models/PointAugment/main_cc.py
+cd Pytorch/models/PointAugment
+srun python main_cc.py
 
 cd $SLURM_TMPDIR
 tar -cf ~/scratch/output/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*

@@ -25,7 +25,6 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
 warnings.filterwarnings("ignore")
-wandb.login()
 
 def get_resources(verbose=True):
 
