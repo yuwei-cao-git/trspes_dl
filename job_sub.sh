@@ -15,12 +15,15 @@ module purge
 module load python/3.10 scipy-stack cuda cudnn
 
 srun --tasks-per-node=1 bash << EOF
+
 virtualenv --no-download $SLURM_TMPDIR/venv
 source $SLURM_TMPDIR/venv/bin/activate
+
 pip install --no-index --upgrade pip
 pip install --no-index torch torchvision torchtext torchaudio
 pip install --no-index -r ~/code/trspes_dl/requirements.txt
 pip install laspy[laszip]
+
 EOF
 
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK

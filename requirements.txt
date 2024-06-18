@@ -16,7 +16,6 @@ numpy==1.26.4+computecanada
 optuna==3.6.1+computecanada
 pathlib==1.0.1+computecanada
 Pillow_SIMD==9.0.0.post1+computecanada
-plyer==2.1.0
 protobuf==4.25.2+computecanada
 scikit_learn==1.4.2+computecanada
 seaborn==0.13.2+computecanada
@@ -30,5 +29,6 @@ torchaudio==2.3.0+computecanada
 torchtext==0.18.0+computecanada
 torchvision==0.18.0+computecanada
 tqdm==4.66.4+computecanada
-typing_extensions==4.12.2+computecanada
 wandb==0.16.0+computecanada
+threadpoolctl==3.5.0+computecanada
+typing_extensions==4.12.2+computecanada
