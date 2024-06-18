@@ -44,13 +44,13 @@ echo "r$SLURM_NODEID Launching test dl cc script"
 # 3mins so far
 
 # code transfer
-cd $SLURM_TEMDIR
+cd $SLURM_TMPDIR
 rm -r work
 mkdir work
 cd work
 git clone git@github.com:yuwei-cao-git/trspes_dl.git
+ls work
 cd trspes_dl
-ls trspes_dl
 
 # data transfer
 mkdir -p data
