@@ -25,6 +25,9 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
 warnings.filterwarnings("ignore")
+os.environ['WANDB_API_KEY']='ef68ccad46154e7175772f65f506c7a97de0a7f4'
+os.environ['WANDB_ENTITY']='yuwei-cao94'
+wandb.log()
 
 def get_resources(verbose=True):
 
