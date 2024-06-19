@@ -64,6 +64,7 @@ def train(params, io, trainset, testset):
             "epoch": params["epochs"],
         },
     )
+    wandb.alert(title="training status", text="start training")
 
     current_device = local_rank
     torch.cuda.set_device(current_device)
@@ -264,11 +265,12 @@ def train(params, io, trainset, testset):
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
             io.cprint("From Rank: {}, Training time {}".format(rank, elapse_time))
-            wandb.log({
-                       "rank": rank,
-                       "batch_time": batch_time,
-                       "Training elaspe time": elapse_time,
-                       })
+            if rank==0:
+                wandb.log({
+                        "rank": rank,
+                        "batch_time": batch_time,
+                        "Training elaspe time": elapse_time,
+                })
 
         # Concatenate true/pred
         train_true = np.concatenate(train_true)
