@@ -57,6 +57,8 @@ def get_resources(verbose=True):
         local_rank = int(os.environ["SLURM_LOCALID"])
         world_size = int(os.environ["SLURM_NPROCS"])
         local_size = int(os.environ["SLURM_NTASKS_PER_NODE"])
+        os.environ['MASTER_ADDR'] = '127.0.0.1'
+        os.environ['MASTER_PORT'] = str(34567 + local_rank)
         if verbose and rank == 0:
             print("launch with srun")
 
@@ -68,7 +70,7 @@ def train(params, io, trainset, testset):
     # parallel settings
     rank, local_rank, world_size, local_size, num_workers = get_resources()
     print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
-    dist.init_process_group("nccl", rank=rank, world_size=world_size)
+    dist.init_process_group("nccl", init_method=params["init_method"], rank=rank, world_size=world_size)
     print("process group ready!")
     print('From Rank: {}, ==> Making model..'.format(rank))
 

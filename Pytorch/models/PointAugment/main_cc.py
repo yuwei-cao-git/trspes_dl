@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import warnings
+import argparse
 
 import torch
 from torch.utils.data import DataLoader, Subset
@@ -13,6 +14,10 @@ from utils.tools import (
 from utils.augmentation import AugmentPointCloudsInPickle
 from utils.train_cc import test, train
 warnings.filterwarnings("ignore")
+
+parser = argparse.ArgumentParser(description='params to init the multi-gpu settings')
+    
+parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
 
 def main(params):
     # set up folder structure
@@ -57,6 +62,7 @@ def main(params):
 if __name__ == "__main__":
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
     class_weights = [1/(100*n/11057) for n in n_samples]
+    args = parser.parse_args()
     params = {
         "exp_name": "pn2_nopointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
         "model": "pn2",  # model
@@ -87,6 +93,7 @@ if __name__ == "__main__":
         "model_path": "",  # pretrained model path
         "cuda": True,  # use cuda
         "eval": False,  # run testing
+        "init_method": args.init_method,
     }
 
     mn = params["exp_name"]
