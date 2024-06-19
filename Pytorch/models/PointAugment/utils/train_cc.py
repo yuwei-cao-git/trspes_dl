@@ -149,10 +149,10 @@ def train(params, io, trainset, testset):
     test_loader = DataLoader(testset, batch_size=params["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=True, sampler=test_sampler)
     
     # store loss on local rank
-    criterion_aug = loss_utils.g_loss(weights).cuda()
-    criterion_aug_calc = loss_utils.d_loss(weights).cuda()
-    criterion_calc = loss_utils.calc_loss(weights).cuda()
-    criterion_mse = F.mse_loss().cuda()
+    #criterion_aug = loss_utils.g_loss(weights).cuda()
+    #criterion_aug_calc = loss_utils.d_loss(weights).cuda()
+    #criterion_calc = loss_utils.calc_loss(weights).cuda()
+    #criterion_mse = F.mse_loss().cuda()
 
     # Iterate through number of epochs
     for epoch in tqdm(range(params["epochs"]), desc="Model Total: ", leave=False, colour="red"):
@@ -199,7 +199,7 @@ def train(params, io, trainset, testset):
                 out_aug = classifier(aug_pc)  # classify augmented
             
                 # Augmentor Loss
-                aug_loss = criterion_aug(label, out_true, out_aug, data, aug_pc, weights).cuda()
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights).cuda()
 
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
@@ -207,9 +207,9 @@ def train(params, io, trainset, testset):
             # Classifier Loss
             optimizer_c.zero_grad()  # zero gradients
             if params["augmentor"]:
-                cls_loss = criterion_aug_calc(label, out_true, out_aug, weights)
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
             else:
-                cls_loss = criterion_calc(label, out_true, weights)
+                cls_loss = loss_utils.calc_loss(label, out_true, weights)
 
             # Backward + Optimizer Classifier
             cls_loss.backward()
@@ -318,7 +318,7 @@ def train(params, io, trainset, testset):
                 output = classifier(data)
 
                 # Calculate loss
-                loss = criterion_mse(F.softmax(output, dim=1), target=label)
+                loss = F.mse_loss(F.softmax(output, dim=1), target=label)
 
                 # Update count and test_loss
                 count += batch_size
