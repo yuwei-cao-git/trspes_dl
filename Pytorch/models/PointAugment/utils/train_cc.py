@@ -33,34 +33,13 @@ def get_resources(verbose=True):
     world_size = 1
     ngpus_per_node = torch.cuda.device_count()
 
-    if os.environ.get("RANK"):
-        # launched with torchrun (python -m torch.distributed.run)
-        rank = int(os.getenv("RANK"))
-        local_rank = int(os.getenv("LOCAL_RANK"))
-        world_size = int(os.getenv("WORLD_SIZE"))
-        local_size = int(os.getenv("LOCAL_WORLD_SIZE"))
-        if verbose and rank == 0:
-            print("launch with torchrun")
-
-    elif os.environ.get("OMPI_COMMAND"):
-        # launched with mpirun
-        rank = int(os.environ["OMPI_COMM_WORLD_RANK"])
-        local_rank = int(os.environ["OMPI_COMM_WORLD_LOCAL_RANK"])
-        world_size = int(os.environ["OMPI_COMM_WORLD_SIZE"])
-        local_size = int(os.environ["OMPI_COMM_WORLD_LOCAL_SIZE"])
-        if verbose and rank == 0:
-            print("launch with mpirun")
-
-    else:
-        # launched with srun (SLURM)
-        rank = int(os.environ["SLURM_PROCID"])
-        local_rank = int(os.environ["SLURM_LOCALID"])
-        world_size = int(os.environ["SLURM_NPROCS"])
-        local_size = int(os.environ["SLURM_NTASKS_PER_NODE"])
-        os.environ['MASTER_ADDR'] = '127.0.0.1'
-        os.environ['MASTER_PORT'] = str(34567 + local_rank)
-        if verbose and rank == 0:
-            print("launch with srun")
+    # launched with srun (SLURM)
+    local_rank = int(os.environ.get("SLURM_LOCALID"))
+    rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
+    world_size = int(os.environ.get["SLURM_NPROCS"])
+    local_size = int(os.environ.get["SLURM_NTASKS_PER_NODE"])
+    if verbose and rank == 0:
+        print("launch with srun")
 
     num_workers = int(os.environ["SLURM_CPUS_PER_TASK"])
 
@@ -70,30 +49,30 @@ def train(params, io, trainset, testset):
     # parallel settings
     rank, local_rank, world_size, local_size, num_workers = get_resources()
     print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
-    dist.init_process_group("nccl", init_method=params["init_method"], rank=rank, world_size=world_size)
+    dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
     print("process group ready!")
     print('From Rank: {}, ==> Making model..'.format(rank))
 
-    device = torch.device("cuda: {}".format(local_rank))
-    torch.cuda.set_device(local_rank)
+    current_device = local_rank
+    torch.cuda.set_device(current_device)
 
     # Classifier
     if params["model"] == "dgcnn":
-        classifier = DGCNN(params, len(params["classes"])).to(device)
+        classifier = DGCNN(params, len(params["classes"])).cuda()
     elif params["model"] == "pn2":
-        classifier = PointNet2(len(params["classes"])).to(device)
+        classifier = PointNet2(len(params["classes"])).cuda()
     else:
         raise Exception("Model Not Implemented")
 
     # Augmentor
     if params["augmentor"]:
-        augmentor = Augmentor().to(device)
+        augmentor = Augmentor().cuda()
 
     # Run in Parallel
     if params["n_gpus"] > 1:
-        classifier = torch.nn.parallel.DistributedDataParallel(classifier, device_ids=[local_rank], output_device=local_rank)
+        classifier = torch.nn.parallel.DistributedDataParallel(classifier, device_ids=[current_device])
         if params["augmentor"]:
-            augmentor = torch.nn.parallel.DistributedDataParallel(augmentor, device_ids=[local_rank], output_device=local_rank)
+            augmentor = torch.nn.parallel.DistributedDataParallel(augmentor, device_ids=[current_device])
     
     # log using wandb
     run = wandb.init(
@@ -158,7 +137,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights)).to(device)
+    weights = torch.Tensor(np.array(weights)).cuda()
 
     # distribute data
     tic = time.perf_counter()
@@ -173,13 +152,14 @@ def train(params, io, trainset, testset):
     test_loader = DataLoader(testset, batch_size=params["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=True, sampler=test_sampler)
     
     # store loss on local rank
-    criterion_aug = loss_utils.g_loss().to(device)
-    criterion_aug_calc = loss_utils.d_loss().to(device)
-    criterion_calc = loss_utils.calc_loss().to(device)
-    criterion_mse = F.mse_loss().to(device)
+    criterion_aug = loss_utils.g_loss().cuda()
+    criterion_aug_calc = loss_utils.d_loss().cuda()
+    criterion_calc = loss_utils.calc_loss().cuda()
+    criterion_mse = F.mse_loss().cuda()
 
     # Iterate through number of epochs
     for epoch in tqdm(range(params["epochs"]), desc="Model Total: ", leave=False, colour="red"):
+        train_sampler.set_epoch(epoch)
         epoch_start = time.time()
         train_loss_a = 0.0
         train_loss_c = 0.0
@@ -196,7 +176,7 @@ def train(params, io, trainset, testset):
             start = time.time()
 
             # Get data and label, move data and label to the same device as model
-            data, label = (data.to(device, non_blocking=True), label.to(device, non_blocking=True).squeeze())
+            data, label = (data.cuda(), label.cuda().squeeze())
 
             # Permute data into correct shape
             data = data.permute(0, 2, 1)  # adapt augmentor to fit with this permutation
@@ -207,7 +187,7 @@ def train(params, io, trainset, testset):
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
-                noise = noise.to(device, non_blocking=True)
+                noise = noise.cuda()
                 augmentor.train()
                 
             classifier.train()
@@ -318,6 +298,7 @@ def train(params, io, trainset, testset):
         # Set up Validation
         classifier.eval()
         with torch.no_grad():
+            test_sampler.set_epoch(epoch)
             test_loss = 0.0
             count = 0
             test_pred = []
@@ -328,7 +309,7 @@ def train(params, io, trainset, testset):
                 test_loader, desc="Validation Total: ", leave=False, colour="green"
             ):
                 # Get data and label
-                data, label = (data.to(device, non_blocking=True), label.to(device, non_blocking=True).squeeze())
+                data, label = (data.cuda(), label.cuda().squeeze())
 
                 # Permute data into correct shape
                 data = data.permute(0, 2, 1)
