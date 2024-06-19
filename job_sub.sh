@@ -45,6 +45,7 @@ echo "r$SLURM_NODEID Launching test dl cc script"
 # 3mins so far
 
 # Log experiment variables
+wandb login ef68ccad46154e7175772f65f506c7a97de0a7f4
 wandb offline
 
 #Run python script

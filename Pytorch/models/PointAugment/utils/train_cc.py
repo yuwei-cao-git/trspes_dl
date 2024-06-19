@@ -75,15 +75,12 @@ def train(params, io, trainset, testset):
             augmentor = torch.nn.parallel.DistributedDataParallel(augmentor, device_ids=[current_device])
     
     # log using wandb
-    run = wandb.init(
+    wandb.init(
         project="tree_species_composition_dl_cc",
+        settings=wandb.Settings(start_method="fork"),
         config={
             "init_learning_rate_a": params["lr_a"],
             "inlearning_rate_c": params["lr_c"],
-            "optimizer_a_exist": params["augmentor"],
-            "optimizer_a": params["optimizer_a"],
-            "optimizer_c": params["optimizer_c"],
-            "adaptive_lr": params["adaptive_lr"],
             "epoch": params["epochs"],
         },
     )
