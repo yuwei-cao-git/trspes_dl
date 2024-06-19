@@ -46,9 +46,17 @@ def get_resources(verbose=True):
     return rank, local_rank, world_size, local_size, num_workers
 
 def train(params, io, trainset, testset):
+    # parallel settings
+    rank, local_rank, world_size, local_size, num_workers = get_resources()
+    print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
+    dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
+    print("process group ready!")
+    print('From Rank: {}, ==> Making model..'.format(rank))
+
     # log using wandb
     wandb.init(
         project="tree_species_composition_dl_cc",
+        group=f'group-{rank}',
         settings=wandb.Settings(start_method="fork"),
         config={
             "init_learning_rate_a": params["lr_a"],
@@ -56,12 +64,6 @@ def train(params, io, trainset, testset):
             "epoch": params["epochs"],
         },
     )
-    # parallel settings
-    rank, local_rank, world_size, local_size, num_workers = get_resources()
-    print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
-    dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
-    print("process group ready!")
-    print('From Rank: {}, ==> Making model..'.format(rank))
 
     current_device = local_rank
     torch.cuda.set_device(current_device)
@@ -164,7 +166,8 @@ def train(params, io, trainset, testset):
         aug_pred = []
         train_true = []
         j=0
-        wandb.log({"epoch": epoch+1})
+        if rank == 0:  # Only log from one process to avoid redundancy
+            wandb.log({"epoch": epoch+1})
         # load data
         for data, label in tqdm(
             train_loader, desc="Training Total: ", leave=False, colour="cyan"
@@ -287,9 +290,11 @@ def train(params, io, trainset, testset):
         # Get average loss'
         if params["augmentor"]:
             train_loss_a = float(train_loss_a) / count
-            wandb.log({"aug_loss": train_loss_a})
+            if rank == 0:  # Only log from one process to avoid redundancy
+                wandb.log({"aug_loss": train_loss_a})
         train_loss_c = float(train_loss_c) / count
-        wandb.log({"class_loss": train_loss_c})
+        if rank == 0:  # Only log from one process to avoid redundancy
+            wandb.log({"class_loss": train_loss_c})
         
         # Set up Validation
         classifier.eval()
@@ -346,10 +351,12 @@ def train(params, io, trainset, testset):
 
             # Calculate R2
             val_r2 = r2_score(test_true.flatten(), test_pred.flatten().round(2))
-            wandb.log({"val_r2": val_r2})
+            if rank == 0:  # Only log from one process to avoid redundancy
+                wandb.log({"val_r2": val_r2})
             # get average test loss
             test_loss = float(test_loss) / count
-            wandb.log({"val_loss": test_loss})
+            if rank == 0:  # Only log from one process to avoid redundancy
+                wandb.log({"val_loss": test_loss})
 
         # print and save losses and r2
         if params["augmentor"]:
@@ -362,7 +369,8 @@ def train(params, io, trainset, testset):
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
-            wandb.log({"aug_loss": train_loss_a})
+            if rank == 0:  # Only log from one process to avoid redundancy
+                wandb.log({"aug_loss": train_loss_a})
         else:
             io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
             # Create output Dataframe
@@ -421,16 +429,18 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler1_a.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                     )
-                    wandb.log({
-                        "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
-                        "Trigger Times": triggertimes,
-                    })
+                    if rank == 0:  # Only log from one process to avoid redundancy
+                        wandb.log({
+                            "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
+                            "Trigger Times": triggertimes,
+                        })
                 io.cprint(
                     f"Classifier LR: {scheduler1_c.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                 )
-                wandb.log({
-                        "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
-                        "Trigger Times": triggertimes,
+                if rank == 0:  # Only log from one process to avoid redundancy
+                    wandb.log({
+                            "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
+                            "Trigger Times": triggertimes,
                     })
             else:
                 if params["augmentor"]:
@@ -440,22 +450,27 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler2_a.optimizer.param_groups[0]['lr']}, Scheduler: Step"
                     )
-                    wandb.log({
-                        "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
-                    })
+                    if rank == 0:  # Only log from one process to avoid redundancy
+                        wandb.log({
+                            "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
+                        })
                 io.cprint(
                     f"Classifier LR: {scheduler2_c.optimizer.param_groups[0]['lr']}, Scheduler: Step"
                 )
-                wandb.log({
-                    "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
+                if rank == 0:  # Only log from one process to avoid redundancy
+                    wandb.log({
+                        "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
-                })
+                    })
         epoch_time = time.time() - epoch_start
-        wandb.log({"epoch_time": epoch_time})
+        if rank == 0:  # Only log from one process to avoid redundancy
+            wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
     if rank == 0:
         wandb.log({"Total Time": tac-tic})
-    wandb.finish()                             
+    # clean up
+    wandb.finish()
+    dist.destroy_process_group()                          
 
 def test(params, io, testset):
     device = torch.device("cuda" if params["cuda"] else "cpu")
