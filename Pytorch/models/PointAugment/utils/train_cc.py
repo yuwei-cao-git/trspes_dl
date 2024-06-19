@@ -468,6 +468,7 @@ def train(params, io, trainset, testset):
             wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
     if rank == 0:
+        wandb.alert(title="training status", text="training end!")
         wandb.log({"Total Time": tac-tic})
     # clean up
     wandb.finish()
