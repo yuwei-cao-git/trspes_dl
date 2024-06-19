@@ -268,8 +268,7 @@ def train(params, io, trainset, testset):
             if rank==0:
                 wandb.log({
                         "rank": rank,
-                        "batch_time": batch_time,
-                        "Training elaspe time": elapse_time,
+                        "batch_time": batch_time
                 })
 
         # Concatenate true/pred
