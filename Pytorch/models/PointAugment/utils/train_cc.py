@@ -46,6 +46,16 @@ def get_resources(verbose=True):
     return rank, local_rank, world_size, local_size, num_workers
 
 def train(params, io, trainset, testset):
+    # log using wandb
+    wandb.init(
+        project="tree_species_composition_dl_cc",
+        settings=wandb.Settings(start_method="fork"),
+        config={
+            "init_learning_rate_a": params["lr_a"],
+            "inlearning_rate_c": params["lr_c"],
+            "epoch": params["epochs"],
+        },
+    )
     # parallel settings
     rank, local_rank, world_size, local_size, num_workers = get_resources()
     print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
@@ -73,17 +83,6 @@ def train(params, io, trainset, testset):
         classifier = torch.nn.parallel.DistributedDataParallel(classifier, device_ids=[current_device])
         if params["augmentor"]:
             augmentor = torch.nn.parallel.DistributedDataParallel(augmentor, device_ids=[current_device])
-    
-    # log using wandb
-    wandb.init(
-        project="tree_species_composition_dl_cc",
-        settings=wandb.Settings(start_method="fork"),
-        config={
-            "init_learning_rate_a": params["lr_a"],
-            "inlearning_rate_c": params["lr_c"],
-            "epoch": params["epochs"],
-        },
-    )
 
     # model parameters
     exp_name = params["exp_name"]
@@ -258,7 +257,7 @@ def train(params, io, trainset, testset):
                             j+=1
                         except:
                             j+=1
-            batch_time = time.time - start
+            batch_time = time.time() - start
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
             io.cprint("From Rank: {}, Training time {}".format(rank, elapse_time))
