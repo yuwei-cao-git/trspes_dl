@@ -149,9 +149,9 @@ def train(params, io, trainset, testset):
     test_loader = DataLoader(testset, batch_size=params["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=True, sampler=test_sampler)
     
     # store loss on local rank
-    criterion_aug = loss_utils.g_loss().cuda()
-    criterion_aug_calc = loss_utils.d_loss().cuda()
-    criterion_calc = loss_utils.calc_loss().cuda()
+    criterion_aug = loss_utils.g_loss(weights).cuda()
+    criterion_aug_calc = loss_utils.d_loss(weights).cuda()
+    criterion_calc = loss_utils.calc_loss(weights).cuda()
     criterion_mse = F.mse_loss().cuda()
 
     # Iterate through number of epochs
@@ -199,7 +199,7 @@ def train(params, io, trainset, testset):
                 out_aug = classifier(aug_pc)  # classify augmented
             
                 # Augmentor Loss
-                aug_loss = criterion_aug(label, out_true, out_aug, data, aug_pc, weights)
+                aug_loss = criterion_aug(label, out_true, out_aug, data, aug_pc, weights).cuda()
 
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
