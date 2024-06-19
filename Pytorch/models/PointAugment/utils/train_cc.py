@@ -36,8 +36,8 @@ def get_resources(verbose=True):
     # launched with srun (SLURM)
     local_rank = int(os.environ.get("SLURM_LOCALID"))
     rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-    world_size = int(os.environ.get["SLURM_NPROCS"])
-    local_size = int(os.environ.get["SLURM_NTASKS_PER_NODE"])
+    world_size = int(os.environ["SLURM_NPROCS"])
+    local_size = int(os.environ["SLURM_NTASKS_PER_NODE"])
     if verbose and rank == 0:
         print("launch with srun")
 
