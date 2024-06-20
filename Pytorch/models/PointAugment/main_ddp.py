@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "exp_name": "pn2_nopointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
         "model": "pn2",  # model
         "augmentor": False,
-        "batch_size": 128,  # batch size
+        "batch_size": 64,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
