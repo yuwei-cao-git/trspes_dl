@@ -1,18 +1,17 @@
-import logging
 import os
 import sys
 import warnings
 import argparse
-
 import torch
-from torch.utils.data import DataLoader, Subset
+
 from utils.tools import (
     IOStream,
     PointCloudsInPickle,
     _init_,
 )
 from utils.augmentation import AugmentPointCloudsInPickle
-from Pytorch.models.PointAugment.utils.train_ddp import test, train
+from utils.train import test, train
+
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='params to init the multi-gpu settings')
