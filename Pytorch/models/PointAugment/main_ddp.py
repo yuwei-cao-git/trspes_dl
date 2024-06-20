@@ -12,7 +12,7 @@ from utils.tools import (
     _init_,
 )
 from utils.augmentation import AugmentPointCloudsInPickle
-from utils.train_cc import test, train
+from Pytorch.models.PointAugment.utils.train_ddp import test, train
 warnings.filterwarnings("ignore")
 
 parser = argparse.ArgumentParser(description='params to init the multi-gpu settings')
