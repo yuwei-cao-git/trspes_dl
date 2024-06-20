@@ -467,6 +467,7 @@ def train(params, io, trainset, testset):
             )
 
         epoch_time = time.time() - epoch_start
+        io.cprint(f"Epoch Training Time: {epoch_time}")
         if rank == 0:  # Only log from one process to avoid redundancy
             wandb.alert(title="training status", text="finish training one epoch!")
             wandb.log({"epoch_time": epoch_time})
