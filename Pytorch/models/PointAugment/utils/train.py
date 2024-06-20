@@ -337,7 +337,6 @@ def train(params, io, trainset, testset):
                         "val_r2": [val_r2]}
             
         out_df = pd.DataFrame.from_dict(out_dict)
-        
         if epoch + 1 > 1:
             loss_r2_df = pd.read_csv(f"checkpoints/{exp_name}/loss_r2.csv")
             loss_r2_df = pd.concat([loss_r2_df, out_df])

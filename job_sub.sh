@@ -17,14 +17,13 @@ mkdir work
 cd work
 git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trspes_dl
-echo "codes finished cloned"
+echo "Source code cloned!"
 
 # data transfer
 mkdir -p data
 # extract an archive to a different directory, the ‘-C’ option is followed by the destination path
 tar -xf $project/data/rmf_laz.tar -C ./data
-ls $SLURM_TMPDIR/work/trspes_dl
-echo "data transfered"
+echo "Data transfered"
 
 # Load python module, and additional required modules
 module purge 
@@ -34,6 +33,7 @@ source $SLURM_TMPDIR/env/bin/activate
 pip install --no-index --upgrade pip
 pip install --no-index -r requirements.txt
 pip install laspy[laszip]
+echo "Virtual Env created!"
 
 # Set environment variables
 export NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
@@ -49,6 +49,7 @@ wandb login df8a833b419940bc3a6d3e5e04857fe61bb72eef
 
 #Run python script
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
+echo "Start runing model.................................................................................."
 cd Pytorch/models/PointAugment
 srun python main_cc.py --init_method tcp://$MASTER_ADDR:3456
 

@@ -47,7 +47,7 @@ def get_resources(verbose=True):
 
 def train(params, io, trainset, testset):
     # parallel settings
-    rank, local_rank, world_size, local_size, num_workers = get_resources()
+    rank, local_rank, world_size, _, num_workers = get_resources()
     print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
     dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
     print("process group ready!")
@@ -264,7 +264,7 @@ def train(params, io, trainset, testset):
             batch_time = time.time() - start
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
-            io.cprint("From Rank: {}, Training time {}".format(rank, elapse_time))
+            #io.cprint("From Rank: {}, Training time {}".format(rank, elapse_time))
             if rank==0:
                 wandb.log({
                         "rank": rank,
@@ -361,7 +361,7 @@ def train(params, io, trainset, testset):
 
         # print and save losses and r2
         if params["augmentor"]:
-            io.cprint(f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+            io.cprint(f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
 
             # Create output Dataframe
             out_dict = {"epoch": [epoch + 1],
@@ -373,7 +373,7 @@ def train(params, io, trainset, testset):
             if rank == 0:  # Only log from one process to avoid redundancy
                 wandb.log({"aug_loss": train_loss_a})
         else:
-            io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+            io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
             # Create output Dataframe
             out_dict = {"epoch": [epoch + 1],
                         "class_loss": [train_loss_c],
@@ -389,31 +389,7 @@ def train(params, io, trainset, testset):
             loss_r2_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
         else:
             out_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
-
-        # Save Best Model
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
-            if params["augmentor"]:
-                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-            else:
-                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-            torch.save(
-                classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
-            )
-
-            # delete old files
-            delete_files(f"checkpoints/{exp_name}/output", "*.csv")
-
-            # Create CSV of best model output
-            create_comp_csv(
-                test_true.flatten(),
-                test_pred.round(2).flatten(),
-                params["classes"],
-                f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
-            )
-
+        
         # Apply addaptive learning
         if params["adaptive_lr"] is True:
             if test_loss > best_test_loss:
@@ -463,8 +439,36 @@ def train(params, io, trainset, testset):
                         "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
                     })
+        
+        # Save Best Model # move after apply addaptive learning, as if put it front, the best_test_loss=test loss, which is never excute the step
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            if params["augmentor"]:
+                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                wandb.alert(title="training status", text="archive better result!")
+            else:
+                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
+                wandb.alert(title="training status", text="archive better result!")
+            torch.save(
+                classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
+            )
+
+            # delete old files
+            delete_files(f"checkpoints/{exp_name}/output", "*.csv")
+
+            # Create CSV of best model output
+            create_comp_csv(
+                test_true.flatten(),
+                test_pred.round(2).flatten(),
+                params["classes"],
+                f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
+            )
+
         epoch_time = time.time() - epoch_start
         if rank == 0:  # Only log from one process to avoid redundancy
+            wandb.alert(title="training status", text="finish training one epoch!")
             wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
     if rank == 0:
@@ -505,7 +509,7 @@ def test(params, io, testset):
             label.to(device).squeeze(),
         )
         data = data.permute(0, 2, 1)
-        batch_size = data.size()[0]
+        #batch_size = data.size()[0]
 
         # Run Model
         output = model(data)
@@ -522,3 +526,4 @@ def test(params, io, testset):
     r2 = r2_score(test_true, test_pred.round(2))
 
     io.cprint(f"R2: {r2}")
+    wandb.log({"R2": r2})
