@@ -80,7 +80,7 @@ if __name__ == "__main__":
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate
-        "lr_c": 1e-4,  # classifier learning rate
+        "lr_c": 5e-4,  # classifier learning rate
         "adaptive_lr": True,  # adaptive learning rate
         "patience": 10,  # patience
         "step_size": 20,  # step size
