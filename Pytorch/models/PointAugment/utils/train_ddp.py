@@ -62,6 +62,7 @@ def train(params, io, trainset, testset):
             "init_learning_rate_a": params["lr_a"],
             "inlearning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
+            "batch size": params["batch_size"],
         },
     )
     wandb.alert(title="training status", text="start training")
@@ -149,7 +150,6 @@ def train(params, io, trainset, testset):
     test_sampler = DistributedSampler(dataset=testset)
     train_loader = DataLoader(trainset, batch_size=params["batch_size"], shuffle=(train_sampler is None), num_workers=num_workers, pin_memory=True, sampler=train_sampler)
     test_loader = DataLoader(testset, batch_size=params["batch_size"], shuffle=False, num_workers=num_workers, pin_memory=True, sampler=test_sampler)
-    
     # store loss on local rank
     #criterion_aug = loss_utils.g_loss(weights).cuda()
     #criterion_aug_calc = loss_utils.d_loss(weights).cuda()
