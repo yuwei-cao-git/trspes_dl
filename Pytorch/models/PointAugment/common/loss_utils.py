@@ -22,7 +22,7 @@ class WeightedMSELoss(nn.Module):
         squared_errors = torch.square(y_pred - y_true)
         # weighted_squared_errors = squared_errors * self.weights.unsqueeze(1)
         weighted_squared_errors = squared_errors * self.weights
-        loss = torch.sum(weighted_squared_errors)
+        loss = torch.mean(weighted_squared_errors)
         return loss
 
 
