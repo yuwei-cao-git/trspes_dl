@@ -63,9 +63,9 @@ if __name__ == "__main__":
     class_weights = [1/(100*n/11057) for n in n_samples]
     args = parser.parse_args()
     params = {
-        "exp_name": "pn2_nopointaugment_7168_WEIGHTS_AUG2",  # experiment name
+        "exp_name": "pn2_PA_7168_WEIGHTS_AUG2",  # experiment name
         "model": "pn2",  # model
-        "augmentor": False,
+        "augmentor": True,
         "batch_size": 96,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
-        "epochs": 100,  # total epochs
+        "epochs": 1,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate
