@@ -63,10 +63,10 @@ if __name__ == "__main__":
     class_weights = [1/(100*n/11057) for n in n_samples]
     args = parser.parse_args()
     params = {
-        "exp_name": "pn2_PA_7168_WEIGHTS_AUG2",  # experiment name
-        "model": "pn2",  # model
-        "augmentor": True,
-        "batch_size": 96,  # batch size
+        "exp_name": "dgcnn_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
+        "model": "dgcnn",  # model
+        "augmentor": False,
+        "batch_size": 64,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
@@ -79,8 +79,8 @@ if __name__ == "__main__":
         "epochs": 1,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
-        "lr_a": 5e-4,  # augmentor learning rate
-        "lr_c": 5e-4,  # classifier learning rate
+        "lr_a": 1e-4,  # augmentor learning rate
+        "lr_c": 1e-4,  # classifier learning rate
         "adaptive_lr": True,  # adaptive learning rate
         "patience": 10,  # patience
         "step_size": 20,  # step size
