@@ -51,7 +51,7 @@ wandb login df8a833b419940bc3a6d3e5e04857fe61bb72eef
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
 echo "Start runing model.................................................................................."
 cd Pytorch/models/PointAugment
-srun python main_ddp.py --init_method tcp://$MASTER_ADDR:3456 --batch_size 20
+srun python main_ddp.py --init_method tcp://$MASTER_ADDR:3456 --batch_size 24
 
 cd $SLURM_TMPDIR
 tar -cf ~/scratch/output/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*
