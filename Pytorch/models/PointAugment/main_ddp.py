@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore")
 parser = argparse.ArgumentParser(description='params to init the multi-gpu settings')
     
 parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
+parser.add_argument('--batch_size', default=32, type=int, help='')
 
 def main(params):
     # set up folder structure
@@ -66,7 +67,7 @@ if __name__ == "__main__":
         "exp_name": "dgcnn_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
         "model": "dgcnn",  # model
         "augmentor": False,
-        "batch_size": 32,  # batch size
+        "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
