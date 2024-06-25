@@ -10,7 +10,7 @@ from utils.tools import (
     _init_,
 )
 from utils.augmentation import AugmentPointCloudsInPickle
-from utils.train import test, train
+from utils.train_ddp import test, train
 
 warnings.filterwarnings("ignore")
 
