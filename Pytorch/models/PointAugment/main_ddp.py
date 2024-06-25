@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "exp_name": "dgcnn_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
         "model": "dgcnn",  # model
         "augmentor": False,
-        "batch_size": 64,  # batch size
+        "batch_size": 32,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
