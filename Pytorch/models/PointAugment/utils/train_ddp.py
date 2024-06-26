@@ -60,7 +60,6 @@ def train(params, io, trainset, testset):
         group=f'group-{rank}',
         settings=wandb.Settings(start_method="fork"),
         config={
-            "model": params["model"],
             "init_learning_rate_a": params["lr_a"],
             "inlearning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
