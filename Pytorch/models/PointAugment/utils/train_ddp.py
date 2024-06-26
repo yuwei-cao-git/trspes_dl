@@ -60,6 +60,7 @@ def train(params, io, trainset, testset):
         group=f'group-{rank}',
         settings=wandb.Settings(start_method="fork"),
         config={
+            "model": params["model"],
             "init_learning_rate_a": params["lr_a"],
             "inlearning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
@@ -391,6 +392,32 @@ def train(params, io, trainset, testset):
         else:
             out_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
         
+        # Save Best Model # move after apply addaptive learning, as if put it front, the best_test_loss=test loss, which is never excute the step
+        if test_loss < best_test_loss:
+            best_test_loss = test_loss
+            if params["augmentor"]:
+                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                wandb.alert(title="training status", text="archive better result!")
+            else:
+                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
+                wandb.alert(title="training status", text="archive better result!")
+            torch.save(
+                classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
+            )
+
+            # delete old files
+            delete_files(f"checkpoints/{exp_name}/output", "*.csv")
+
+            # Create CSV of best model output
+            create_comp_csv(
+                test_true.flatten(),
+                test_pred.round(2).flatten(),
+                params["classes"],
+                f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
+            )
+        
         # Apply addaptive learning
         if params["adaptive_lr"] is True:
             if test_loss > best_test_loss:
@@ -440,32 +467,6 @@ def train(params, io, trainset, testset):
                         "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
                     })
-        
-        # Save Best Model # move after apply addaptive learning, as if put it front, the best_test_loss=test loss, which is never excute the step
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
-            if params["augmentor"]:
-                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                wandb.alert(title="training status", text="archive better result!")
-            else:
-                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
-                wandb.alert(title="training status", text="archive better result!")
-            torch.save(
-                classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
-            )
-
-            # delete old files
-            delete_files(f"checkpoints/{exp_name}/output", "*.csv")
-
-            # Create CSV of best model output
-            create_comp_csv(
-                test_true.flatten(),
-                test_pred.round(2).flatten(),
-                params["classes"],
-                f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
-            )
 
         epoch_time = time.time() - epoch_start
         io.cprint(f"Epoch Training Time: {epoch_time}")
