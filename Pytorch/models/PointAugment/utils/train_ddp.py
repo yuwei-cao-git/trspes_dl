@@ -164,8 +164,7 @@ def train(params, io, trainset, testset):
         aug_pred = []
         train_true = []
         j=0
-        if rank == 0:  # Only log from one process to avoid redundancy
-            wandb.log({"epoch": epoch+1})
+        wandb.log({"epoch": epoch+1})
         # load data
         for data, label in tqdm(
             train_loader, desc="Training Total: ", leave=False, colour="cyan"
@@ -262,11 +261,10 @@ def train(params, io, trainset, testset):
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
             #io.cprint("From Rank: {}, Training time {}".format(rank, elapse_time))
-            if rank==0:
-                wandb.log({
-                        "rank": rank,
-                        "batch_time": batch_time
-                })
+            wandb.log({
+                    "rank": rank,
+                    "batch_time": batch_time
+            })
 
         # Concatenate true/pred
         train_true = np.concatenate(train_true)
@@ -288,11 +286,9 @@ def train(params, io, trainset, testset):
         # Get average loss'
         if params["augmentor"]:
             train_loss_a = float(train_loss_a) / count
-            if rank == 0:  # Only log from one process to avoid redundancy
-                wandb.log({"aug_loss": train_loss_a})
+            wandb.log({"aug_loss": train_loss_a})
         train_loss_c = float(train_loss_c) / count
-        if rank == 0:  # Only log from one process to avoid redundancy
-            wandb.log({"class_loss": train_loss_c})
+        wandb.log({"class_loss": train_loss_c})
         
         # Set up Validation
         classifier.eval()
@@ -349,12 +345,10 @@ def train(params, io, trainset, testset):
 
             # Calculate R2
             val_r2 = r2_score(test_true.flatten(), test_pred.flatten().round(2))
-            if rank == 0:  # Only log from one process to avoid redundancy
-                wandb.log({"val_r2": val_r2})
+            wandb.log({"val_r2": val_r2})
             # get average test loss
             test_loss = float(test_loss) / count
-            if rank == 0:  # Only log from one process to avoid redundancy
-                wandb.log({"val_loss": test_loss})
+            wandb.log({"val_loss": test_loss})
 
         # print and save losses and r2
         if params["augmentor"]:
@@ -367,8 +361,7 @@ def train(params, io, trainset, testset):
                         "train_r2": [train_r2],
                         "val_loss": [test_loss],
                         "val_r2": [val_r2]}
-            if rank == 0:  # Only log from one process to avoid redundancy
-                wandb.log({"aug_loss": train_loss_a})
+            wandb.log({"aug_loss": train_loss_a})
         else:
             io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
             # Create output Dataframe
@@ -429,19 +422,17 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler1_a.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                     )
-                    if rank == 0:  # Only log from one process to avoid redundancy
-                        wandb.log({
-                            "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
-                            "Trigger Times": triggertimes,
-                        })
+                    wandb.log({
+                        "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
+                        "Trigger Times": triggertimes,
+                    })
                 io.cprint(
                     f"Classifier LR: {scheduler1_c.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
                 )
-                if rank == 0:  # Only log from one process to avoid redundancy
-                    wandb.log({
-                            "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
-                            "Trigger Times": triggertimes,
-                    })
+                wandb.log({
+                        "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
+                        "Trigger Times": triggertimes,
+                })
             else:
                 if params["augmentor"]:
                     scheduler2_a.step()
@@ -450,28 +441,23 @@ def train(params, io, trainset, testset):
                     io.cprint(
                         f"Augmentor LR: {scheduler2_a.optimizer.param_groups[0]['lr']}, Scheduler: Step"
                     )
-                    if rank == 0:  # Only log from one process to avoid redundancy
-                        wandb.log({
-                            "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
-                        })
+                    wandb.log({
+                        "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
+                    })
                 io.cprint(
                     f"Classifier LR: {scheduler2_c.optimizer.param_groups[0]['lr']}, Scheduler: Step"
                 )
-                if rank == 0:  # Only log from one process to avoid redundancy
-                    wandb.log({
-                        "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
+                wandb.log({
+                    "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
-                    })
+                })
 
         epoch_time = time.time() - epoch_start
         io.cprint(f"Epoch Training Time: {epoch_time}")
-        if rank == 0:  # Only log from one process to avoid redundancy
-            wandb.alert(title="training status", text="finish training one epoch!")
-            wandb.log({"epoch_time": epoch_time})
+        wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
-    if rank == 0:
-        wandb.alert(title="training status", text="training end!")
-        wandb.log({"Total Time": tac-tic})
+    wandb.alert(title="training status", text="training end!")
+    wandb.log({"Total Time": tac-tic})
     # clean up
     wandb.finish()
     dist.destroy_process_group()                          

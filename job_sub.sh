@@ -36,7 +36,7 @@ pip install laspy[laszip]
 echo "Virtual Env created!"
 
 # Set environment variables
-export NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
+export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
 export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MASTER_ADDR environment variable.
 
 #Print (echo) info to output file
@@ -51,10 +51,10 @@ wandb login df8a833b419940bc3a6d3e5e04857fe61bb72eef
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
 echo "Start runing model.................................................................................."
 cd Pytorch/models/PointAugment
-srun python main_ddp.py --init_method tcp://$MASTER_ADDR:3456 --batch_size 24
+srun python main_ddp.py --init_method tcp://$MASTER_ADDR:3456 --batch_size 20
 
 cd $SLURM_TMPDIR
-tar -cf ~/scratch/output/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*
-tar -cf ~/scratch/output/wandblogs.tar work/trspes_dl/Pytorch/models/PointAugment/wandb/*
+tar -cf ~/scratch/output/run5/checkpoints.tar work/trspes_dl/Pytorch/models/PointAugment/checkpoints/*
+tar -cf ~/scratch/output/run5/wandblogs.tar work/trspes_dl/Pytorch/models/PointAugment/wandb/*
 
 echo "end"
