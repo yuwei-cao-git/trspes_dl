@@ -3,6 +3,7 @@ import random
 import warnings
 import time
 import datetime
+from pathlib import Path
 import wandb
 
 import numpy as np
@@ -373,7 +374,7 @@ def train(params, io, trainset, testset):
             
         out_df = pd.DataFrame.from_dict(out_dict)
         
-        if epoch + 1 > 1:
+        if not Path.exists(f"checkpoints/{exp_name}/loss_r2.csv"):
             loss_r2_df = pd.read_csv(f"checkpoints/{exp_name}/loss_r2.csv")
             loss_r2_df = pd.concat([loss_r2_df, out_df])
             loss_r2_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
@@ -384,13 +385,10 @@ def train(params, io, trainset, testset):
         if test_loss < best_test_loss:
             best_test_loss = test_loss
             if params["augmentor"]:
-                # send_telegram(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
                 io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
-                wandb.alert(title="training status", text="archive better result!")
             else:
-                # send_telegram(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
                 io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
-                wandb.alert(title="training status", text="archive better result!")
+                # wandb.alert(title="training status", text="archive better result!")
             torch.save(
                 classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
             )
@@ -419,16 +417,10 @@ def train(params, io, trainset, testset):
                     scheduler1_a.step(test_loss)
                 scheduler1_c.step(test_loss)
                 if params["augmentor"]:
-                    io.cprint(
-                        f"Augmentor LR: {scheduler1_a.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
-                    )
                     wandb.log({
                         "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
                         "Trigger Times": triggertimes,
                     })
-                io.cprint(
-                    f"Classifier LR: {scheduler1_c.optimizer.param_groups[0]['lr']}, Trigger Times: {triggertimes}, Scheduler: Plateau"
-                )
                 wandb.log({
                         "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
                         "Trigger Times": triggertimes,
@@ -438,15 +430,9 @@ def train(params, io, trainset, testset):
                     scheduler2_a.step()
                 scheduler2_c.step()
                 if params["augmentor"]:
-                    io.cprint(
-                        f"Augmentor LR: {scheduler2_a.optimizer.param_groups[0]['lr']}, Scheduler: Step"
-                    )
                     wandb.log({
                         "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
                     })
-                io.cprint(
-                    f"Classifier LR: {scheduler2_c.optimizer.param_groups[0]['lr']}, Scheduler: Step"
-                )
                 wandb.log({
                     "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
