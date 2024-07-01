@@ -129,14 +129,14 @@ class Augmentor(nn.Module):
 
         pt = raw_pt.transpose(2, 1).contiguous()
 
-        p1 = torch.rand(1).to(device)
+        p1 = torch.rand(1, device=device)
         possi = 0.0
         if p1.item() > possi:
             pt = torch.bmm(pt, rotation).transpose(1, 2).contiguous()
         else:
             pt = pt.transpose(1, 2).contiguous()
 
-        p2 = torch.tensor(random.uniform(0, 1)).to(device)
+        p2 = torch.tensor(random.uniform(0, 1), device=device)
         if p2.item() > possi:
             pt = pt + displacement
 
