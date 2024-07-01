@@ -31,8 +31,7 @@ def get_graph_feature(x, k=20, idx=None):
     x = x.view(batch_size, -1, num_points)
     if idx is None:  # get idx of not given
         idx = knn(x, k=k)  # knn
-    #device = torch.device("cuda")  # might need to change for data parallel
-    device = x.device  # use the same device as the input tensor
+    device = torch.device("cuda")  # might need to change for data parallel
 
     idx_base = torch.arange(0, batch_size, device=device).view(-1, 1, 1) * num_points
     idx = idx + idx_base
