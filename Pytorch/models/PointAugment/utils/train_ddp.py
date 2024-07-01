@@ -55,6 +55,9 @@ def train(params, io, trainset, testset):
     print("process group ready!")
     print('From Rank: {}, ==> Making model..'.format(rank))
 
+    current_device = local_rank
+    torch.cuda.set_device(current_device)
+
     # log using wandb
     wandb.init(
         project="tree_species_composition_dl_cc",
@@ -69,9 +72,6 @@ def train(params, io, trainset, testset):
         },
     )
     wandb.alert(title="training status", text="start training")
-
-    current_device = local_rank
-    torch.cuda.set_device(current_device)
 
     # Classifier
     if params["model"] == "dgcnn":
