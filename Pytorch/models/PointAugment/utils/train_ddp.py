@@ -26,6 +26,7 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 
 warnings.filterwarnings("ignore")
+torch.autograd.set_detect_anomaly(True)
 wandb.login()
 
 def get_resources(verbose=True):
@@ -140,7 +141,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights)).cuda()
+    weights = torch.Tensor(np.array(weights))
 
     # distribute data
     tic = time.perf_counter()
@@ -199,7 +200,7 @@ def train(params, io, trainset, testset):
                 out_aug = classifier(aug_pc)  # classify augmented
             
                 # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights).cuda()
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights.cuda()).cuda()
 
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
