@@ -66,7 +66,7 @@ if __name__ == "__main__":
     params = {
         "exp_name": "dgcnn_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
         "model": "dgcnn",  # model
-        "augmentor": False,
+        "augmentor": True,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
