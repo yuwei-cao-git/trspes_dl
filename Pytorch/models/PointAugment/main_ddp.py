@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(description='params to init the multi-gpu setti
     
 parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
 parser.add_argument('--batch_size', default=32, type=int, help='')
-parser.add_argument('--use_augmentor', default=False, type=bool, help='')
+parser.add_argument('--use_augmentor', action='store_true', help='')
 
 def main(params):
     # set up folder structure
