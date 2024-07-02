@@ -245,15 +245,16 @@ def train(params, io, trainset, testset):
                 true_pred.append(true_np)
             if params["augmentor"]:
                 if epoch + 1 in [1, 50, 100, 150, 200, 250, 300]:
-                    if random.random() > 0.99:
-                        aug_pc_np = aug_pc.detach().cpu().numpy()
-                        true_pc_np = data.detach().cpu().numpy()
-                        try:
-                            write_las(aug_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_aug.laz")
-                            write_las(true_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_true.laz")
-                            j+=1
-                        except:
-                            j+=1
+                    if rank==0:
+                        if random.random() > 0.99:
+                            aug_pc_np = aug_pc.detach().cpu().numpy()
+                            true_pc_np = data.detach().cpu().numpy()
+                            try:
+                                write_las(aug_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_aug.laz")
+                                write_las(true_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_true.laz")
+                                j+=1
+                            except:
+                                j+=1
             batch_time = time.time() - start
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
@@ -385,9 +386,10 @@ def train(params, io, trainset, testset):
             else:
                 io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
                 # wandb.alert(title="training status", text="archive better result!")
-            torch.save(
-                classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
-            )
+            if rank==0:
+                torch.save(
+                    classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
+                )
 
             # delete old files
             delete_files(f"checkpoints/{exp_name}/output", "*.csv")
