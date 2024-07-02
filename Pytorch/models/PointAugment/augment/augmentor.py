@@ -14,7 +14,7 @@ def batch_quat_to_rotmat(q, out=None):
     B = q.size(0)
 
     if out is None:
-        out = q.new_empty(B, 3, 3).to(q.device)
+        out = q.new_empty(B, 3, 3).cuda()
 
     # 2 / squared quaternion 2-norm
     leng = torch.sum(q.pow(2), 1)
@@ -54,7 +54,7 @@ class AugmentorRotation(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.fc2(x)))
         x = self.fc3(x)
-        iden = x.new_tensor([1, 0, 0, 0]).to(x.device)
+        iden = x.new_tensor([1, 0, 0, 0]).cuda()
         x = x + iden
 
         x, s = batch_quat_to_rotmat(x)

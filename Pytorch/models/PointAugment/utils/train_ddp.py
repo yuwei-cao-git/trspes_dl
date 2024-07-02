@@ -50,8 +50,6 @@ def get_resources(verbose=True):
     return rank, local_rank, world_size, local_size, num_workers
 
 def train(params, io, trainset, testset):
-    # parallel settings
-    rank, local_rank, world_size, _, num_workers = get_resources()
     
     # log using wandb
     runs = wandb.init(
@@ -66,6 +64,8 @@ def train(params, io, trainset, testset):
             "batch size": params["batch_size"],
         },
     )
+    # parallel settings
+    rank, local_rank, world_size, _, num_workers = get_resources()
     current_device = local_rank
     torch.cuda.set_device(current_device)
 
@@ -76,17 +76,17 @@ def train(params, io, trainset, testset):
 
     # Classifier
     if params["model"] == "dgcnn":
-        classifier = DGCNN(params, len(params["classes"])).to(current_device)
+        classifier = DGCNN(params, len(params["classes"])).cuda()
     elif params["model"] == "pn2":
-        classifier = PointNet2(len(params["classes"])).to(current_device)
+        classifier = PointNet2(len(params["classes"])).cuda()
     else:
         raise Exception("Model Not Implemented")
     # Wrap the model with DDP
-    classifier = DDP(classifier, device_ids=[local_rank])
+    classifier = DDP(classifier, device_ids=[current_device])
     # Augmentor
     if params["augmentor"]:
-        augmentor = Augmentor().to(current_device)
-        augmentor = DDP(augmentor, device_ids=[local_rank])
+        augmentor = Augmentor().cuda()
+        augmentor = DDP(augmentor, device_ids=[current_device])
    
     # model parameters
     exp_name = params["exp_name"]
@@ -168,7 +168,7 @@ def train(params, io, trainset, testset):
             start = time.time()
 
             # Get data and label, move data and label to the same device as model
-            data, label = (data.to(current_device), label.to(current_device).squeeze())
+            data, label = (data.cuda(), label.cuda().squeeze())
 
             # Permute data into correct shape
             data = data.permute(0, 2, 1)  # adapt augmentor to fit with this permutation
@@ -179,20 +179,21 @@ def train(params, io, trainset, testset):
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
-                noise = noise.to(current_device)
+                noise = noise.cuda()
                 augmentor.train()
                 
             classifier.train()
             if params["augmentor"]:
                 optimizer_a.zero_grad()  # zero gradients
                 group = (data, noise)
-                aug_pc = augmentor(group).to(current_device)
+                aug_pc = augmentor(group)
 
             # Classify
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
-                out_aug = classifier(aug_pc).to(current_device)  # classify augmented
-            
+                out_aug = classifier(aug_pc)  # classify augmented
+                if epoch+1 == 1:
+                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device}, out_true: {out_true.device}, out_aug: {out_aug.device}, data: {data.device}, aug_pc: {aug_pc.device}, weights: {weights.device}")
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
 
