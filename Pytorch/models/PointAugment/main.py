@@ -12,7 +12,6 @@ from utils.tools import (
     PointCloudsInPickle,
     _init_,
     delete_files,
-    notifi,
     plot_stats,
 )
 from utils.augmentation import AugmentPointCloudsInPickle
@@ -73,10 +72,10 @@ if __name__ == "__main__":
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
     class_weights = [1/(100*n/11057) for n in n_samples]
     params = {
-        "exp_name": "pn2_nopointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
+        "exp_name": "pn2_pointaugment_7168_WEIGHTS_NOAUG2",  # experiment name
         "model": "pn2",  # model
-        "augmentor": False,
-        "batch_size": 10,  # batch size
+        "augmentor": True,
+        "batch_size": 2,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
@@ -86,7 +85,7 @@ if __name__ == "__main__":
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
-        "epochs": 1,  # total epochs
+        "epochs": 2,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate

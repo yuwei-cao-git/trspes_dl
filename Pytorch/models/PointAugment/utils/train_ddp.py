@@ -23,6 +23,7 @@ from tqdm import tqdm
 from utils.tools import create_comp_csv, delete_files, variable_df, write_las, plot_3d, plot_2d
 # import torch.profiler
 import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
 warnings.filterwarnings("ignore")
@@ -51,13 +52,13 @@ def get_resources(verbose=True):
 def train(params, io, trainset, testset):
     # parallel settings
     rank, local_rank, world_size, _, num_workers = get_resources()
+    current_device = local_rank
+    torch.cuda.set_device(current_device)
+
     print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
     dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
     print("process group ready!")
     print('From Rank: {}, ==> Making model..'.format(rank))
-
-    current_device = local_rank
-    torch.cuda.set_device(current_device)
 
     # log using wandb
     wandb.init(
@@ -81,17 +82,13 @@ def train(params, io, trainset, testset):
         classifier = PointNet2(len(params["classes"])).cuda()
     else:
         raise Exception("Model Not Implemented")
-
+    # Wrap the model with DDP
+    classifier = DDP(classifier, device_ids=[current_device])
     # Augmentor
     if params["augmentor"]:
         augmentor = Augmentor().cuda()
-
-    # Run in Parallel
-    if params["n_gpus"] > 1:
-        classifier = torch.nn.parallel.DistributedDataParallel(classifier, device_ids=[current_device])
-        if params["augmentor"]:
-            augmentor = torch.nn.parallel.DistributedDataParallel(augmentor, device_ids=[current_device])
-
+        augmentor = DDP(augmentor, device_ids=[current_device])
+   
     # model parameters
     exp_name = params["exp_name"]
 
@@ -141,7 +138,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights))
+    weights = torch.Tensor(np.array(weights)).cuda()
 
     # distribute data
     tic = time.perf_counter()
@@ -200,7 +197,7 @@ def train(params, io, trainset, testset):
                 out_aug = classifier(aug_pc)  # classify augmented
             
                 # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights.cuda()).cuda()
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
 
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
