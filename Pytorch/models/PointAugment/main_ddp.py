@@ -3,7 +3,7 @@ import sys
 import warnings
 import argparse
 import torch
-from torch.data.utils import Subset
+from torch.utils.data import Subset
 
 from utils.tools import (
     IOStream,
@@ -49,15 +49,15 @@ def main(params):
             trainset = torch.utils.data.ConcatDataset(
                 [trainset, aug_trainset]
             )
-
-    test_data_path = os.path.join(params["test_path"], str(params["num_points"]))
-    test_pickle = params["test_pickle"]
-    testset = PointCloudsInPickle(test_data_path, test_pickle)
     trainset_idx = list(range(len(trainset)))
     rem = len(trainset_idx) % params["batch_size"]
     if rem <= 3:
         trainset_idx = trainset_idx[: len(trainset_idx) - rem]
         trainset = Subset(trainset, trainset_idx)
+
+    test_data_path = os.path.join(params["test_path"], str(params["num_points"]))
+    test_pickle = params["test_pickle"]
+    testset = PointCloudsInPickle(test_data_path, test_pickle)
 
     if not params["eval"]:
         train(params, io, trainset, testset)
