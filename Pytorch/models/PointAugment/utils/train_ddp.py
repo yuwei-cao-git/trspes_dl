@@ -18,7 +18,7 @@ from models.pointnet2 import PointNet2
 from common import loss_utils
 from sklearn.metrics import r2_score
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils.tools import create_comp_csv, delete_files, variable_df, write_las, plot_3d, plot_2d
 # import torch.profiler
@@ -40,7 +40,7 @@ def get_resources(verbose=True):
     # launched with srun (SLURM)
     local_rank = int(os.environ.get("SLURM_LOCALID"))
     rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-    world_size = int(os.environ["SLURM_NPROCS"])
+    world_size = int(os.environ["SLURM_NTASKS_PER_NODE"])*int(os.environ["SLURM_JOB_NUM_NODES"])
     local_size = int(os.environ["SLURM_NTASKS_PER_NODE"])
     if verbose and rank == 0:
         print("launch with srun")
@@ -52,19 +52,12 @@ def get_resources(verbose=True):
 def train(params, io, trainset, testset):
     # parallel settings
     rank, local_rank, world_size, _, num_workers = get_resources()
-    current_device = local_rank
-    torch.cuda.set_device(current_device)
-
-    print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
-    dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
-    print("process group ready!")
-    print('From Rank: {}, ==> Making model..'.format(rank))
-
+    
     # log using wandb
-    wandb.init(
+    runs = wandb.init(
         project="tree_species_composition_dl_cc",
-        group=f'group-{rank}',
-        settings=wandb.Settings(start_method="fork"),
+        #group=f'group-{rank}',
+        #settings=wandb.Settings(start_method="fork"),
         config={
             "model": params["model"],
             "init_learning_rate_a": params["lr_a"],
@@ -73,21 +66,27 @@ def train(params, io, trainset, testset):
             "batch size": params["batch_size"],
         },
     )
-    wandb.alert(title="training status", text="start training")
+    current_device = local_rank
+    torch.cuda.set_device(current_device)
+
+    print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
+    dist.init_process_group("nccl", init_method=params["init_method"], world_size=world_size, rank=rank)
+    print("process group ready!")
+    print('From Rank: {}, ==> Making model..'.format(rank))
 
     # Classifier
     if params["model"] == "dgcnn":
-        classifier = DGCNN(params, len(params["classes"])).cuda()
+        classifier = DGCNN(params, len(params["classes"])).to(current_device)
     elif params["model"] == "pn2":
-        classifier = PointNet2(len(params["classes"])).cuda()
+        classifier = PointNet2(len(params["classes"])).to(current_device)
     else:
         raise Exception("Model Not Implemented")
     # Wrap the model with DDP
-    classifier = DDP(classifier, device_ids=[current_device])
+    classifier = DDP(classifier, device_ids=[local_rank])
     # Augmentor
     if params["augmentor"]:
-        augmentor = Augmentor().cuda()
-        augmentor = DDP(augmentor, device_ids=[current_device])
+        augmentor = Augmentor().to(current_device)
+        augmentor = DDP(augmentor, device_ids=[local_rank])
    
     # model parameters
     exp_name = params["exp_name"]
@@ -138,15 +137,13 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights)).cuda()
+    weights = torch.Tensor(np.array(weights)).to(current_device)
 
-    # distribute data
+    wandb.alert(title="training status", text="start training")
     tic = time.perf_counter()
-    trainset_idx = list(range(len(trainset)))
-    rem = len(trainset_idx) % params["batch_size"]
-    if rem <= 3:
-        trainset_idx = trainset_idx[: len(trainset_idx) - rem]
-        trainset = Subset(trainset, trainset_idx)
+
+    print('From Rank: {}, ==> Preparing data..'.format(rank))
+    # distribute data
     train_sampler = DistributedSampler(dataset=trainset)
     test_sampler = DistributedSampler(dataset=testset)
     train_loader = DataLoader(trainset, batch_size=params["batch_size"], shuffle=(train_sampler is None), num_workers=num_workers, pin_memory=True, sampler=train_sampler)
@@ -171,7 +168,7 @@ def train(params, io, trainset, testset):
             start = time.time()
 
             # Get data and label, move data and label to the same device as model
-            data, label = (data.cuda(), label.cuda().squeeze())
+            data, label = (data.to(current_device), label.to(current_device).squeeze())
 
             # Permute data into correct shape
             data = data.permute(0, 2, 1)  # adapt augmentor to fit with this permutation
@@ -182,19 +179,19 @@ def train(params, io, trainset, testset):
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
-                noise = noise.cuda()
+                noise = noise.to(current_device)
                 augmentor.train()
                 
             classifier.train()
             if params["augmentor"]:
                 optimizer_a.zero_grad()  # zero gradients
                 group = (data, noise)
-                aug_pc = augmentor(group)
+                aug_pc = augmentor(group).to(current_device)
 
             # Classify
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
-                out_aug = classifier(aug_pc)  # classify augmented
+                out_aug = classifier(aug_pc).to(current_device)  # classify augmented
             
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
