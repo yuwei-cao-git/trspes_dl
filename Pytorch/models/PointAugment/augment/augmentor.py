@@ -106,7 +106,7 @@ class Augmentor(nn.Module):
         B, C, N = data.size() # batch, channels, num points
         raw_pt = data[:, :3, :].contiguous()
         normal = data[:, 3:, :].transpose(1, 2).contiguous() if C > 3 else None
-        print(f"raw_pt_device: {raw_pt.device}, noram: {normal.device}")
+        print(f"raw_pt_device: {raw_pt.device}")
         x = F.relu(self.bn1(self.conv1(raw_pt)))
         x = F.relu(self.bn2(self.conv2(x)))
         pointfeat = x
