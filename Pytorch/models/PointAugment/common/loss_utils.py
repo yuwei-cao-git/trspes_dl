@@ -36,7 +36,7 @@ def calc_loss(y_true, y_pred, weights):
 
 def d_loss(y_true, y_pred, aug_y_pred, weights, w=0.5):
     """Loss function for the discriminator (classifier)"""
-    LeakyReLU = nn.LeakyReLU(0.0)
+    #LeakyReLU = nn.LeakyReLU(0.0)
     y_loss = calc_loss(y_true, y_pred, weights)  # loss for true
     aug_y_loss = calc_loss(y_true, aug_y_pred, weights)  # loss for augmented
 
@@ -49,9 +49,9 @@ def g_loss(y_true, y_pred, aug_y_pred, data, aug, weights, lamb=2e-4):
     """Loss function for the generator (augmentor)"""
     pdist = nn.PairwiseDistance(p=1, keepdim=True)  # pairwise distance
     LeakyReLU = nn.LeakyReLU(0.0)  # leaky relu
-    y_loss = calc_loss(y_true, y_pred, weights)  # loss for true
-    aug_y_loss = calc_loss(y_true, aug_y_pred, weights)  # loss for augmented
-    aug_pdist = pdist(data, aug).mul(lamb) # pairwise distance
-    loss = LeakyReLU(y_loss - aug_y_loss + aug_pdist).mean() # final loss
+    y_loss = calc_loss(y_true, y_pred, weights).to(y_true.device)  # loss for true
+    aug_y_loss = calc_loss(y_true, aug_y_pred, weights).to(y_true.device)  # loss for augmented
+    aug_pdist = pdist(data, aug).to(y_true.device).mul(lamb) # pairwise distance
+    loss = torch.mean(LeakyReLU(y_loss - aug_y_loss + aug_pdist)) # final loss
 
     return loss
