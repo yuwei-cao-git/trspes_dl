@@ -70,8 +70,8 @@ if __name__ == "__main__":
     class_weights = [1/(100*n/11057) for n in n_samples]
     args = parser.parse_args()
     params = {
-        "exp_name": "pn2_ddp_PA_7168_WEIGHTS_NOAUG2",  # experiment name
-        "model": "pn2",  # model
+        "exp_name": "dgcnn_ddp_PA_7168_WEIGHTS_NOAUG2",  # experiment name
+        "model": "dgcnn",  # model
         "augmentor": True,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
