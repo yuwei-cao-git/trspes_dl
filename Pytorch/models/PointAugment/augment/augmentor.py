@@ -136,12 +136,12 @@ class Augmentor(nn.Module):
             rotated_pt = torch.bmm(pt, rotation).transpose(1, 2).contiguous()
         else:
             rotated_pt = pt.transpose(1, 2).contiguous()
-        pt = rotated_pt
+        pt2 = rotated_pt
         p2 = random.uniform(0, 1)
         if p2 > possi:
-            displaced_pt = pt + displacement
-            pt = displaced_pt  # Assign the new tensor to pt
+            displaced_pt = pt2 + displacement
+            pt2 = displaced_pt  # Assign the new tensor to pt
         if normal is not None:
             normal = (torch.bmm(normal, rotation)).transpose(1, 2).contiguous()
-            pt = torch.cat([pt, normal], 1)
-        return pt
+            pt2 = torch.cat([pt2, normal], 1)
+        return pt2
