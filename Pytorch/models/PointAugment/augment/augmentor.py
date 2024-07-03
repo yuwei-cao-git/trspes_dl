@@ -1,6 +1,5 @@
 # Adapted from https://github.com/liruihui/PointAugment/blob/master/Augment/augmentor.py
 import random
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -107,24 +106,27 @@ class Augmentor(nn.Module):
         B, C, N = data.size() # batch, channels, num points
         raw_pt = data[:, :3, :].contiguous()
         normal = data[:, 3:, :].transpose(1, 2).contiguous() if C > 3 else None
+        print(f"raw_pt_device: {raw_pt.device}, noram: {normal.device}")
         x = F.relu(self.bn1(self.conv1(raw_pt)))
         x = F.relu(self.bn2(self.conv2(x)))
         pointfeat = x
+        print(f"pointfeat: {pointfeat.device}")
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = torch.max(x, 2, keepdim=True)[0]
-
+        print(f"x: {x.device}")
         feat_r = x.view(-1, 1024)
         feat_r = torch.cat([feat_r, noise], 1)
         rotation, scale = self.rot(feat_r)
+        print(f"rotation: {rotation.device}")
 
         feat_d = x.view(-1, 1024, 1).repeat(1, 1, N)
         noise_d = noise.view(B, -1, 1).repeat(1, 1, N)
         feat_d = torch.cat([pointfeat, feat_d, noise_d], 1)
         displacement = self.dis(feat_d)
-
+        print(f"displacement: {displacement.device}")
         pt = raw_pt.transpose(2, 1).contiguous()
-
+        print(f"pt: {pt.device}")
         p1 = random.uniform(0, 1)
         possi = 0.0
         if p1 > possi:
@@ -132,14 +134,14 @@ class Augmentor(nn.Module):
         else:
             rotated_pt = pt.transpose(1, 2).contiguous()
         pt = rotated_pt
-
+        print(f"pt: {pt.device}")
         p2 = random.uniform(0, 1)
         if p2 > possi:
             displaced_pt = pt + displacement
             pt = displaced_pt  # Assign the new tensor to pt
-
+        print(f"pt: {pt.device}")
         if normal is not None:
             normal = (torch.bmm(normal, rotation)).transpose(1, 2).contiguous()
             pt = torch.cat([pt, normal], 1)
-
+        print(f"pt: {pt.device}")
         return pt
