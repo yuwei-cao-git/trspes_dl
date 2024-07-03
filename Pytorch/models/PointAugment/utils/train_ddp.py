@@ -195,9 +195,7 @@ def train(params, io, trainset, testset):
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
                 # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights).cuda()
-                if epoch+1 == 1:
-                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device},  loss: {aug_loss.device}, augmentor: {augmentor.device}")
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
             
@@ -372,7 +370,7 @@ def train(params, io, trainset, testset):
             
         out_df = pd.DataFrame.from_dict(out_dict)
         
-        if not Path.exists(f"checkpoints/{exp_name}/loss_r2.csv"):
+        if not Path(f"checkpoints/{exp_name}/loss_r2.csv").exists:
             loss_r2_df = pd.read_csv(f"checkpoints/{exp_name}/loss_r2.csv")
             loss_r2_df = pd.concat([loss_r2_df, out_df])
             loss_r2_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
