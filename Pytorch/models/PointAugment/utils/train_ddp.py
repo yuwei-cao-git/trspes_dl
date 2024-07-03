@@ -196,8 +196,10 @@ def train(params, io, trainset, testset):
                 out_aug = classifier(aug_pc)  # classify augmented
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
+                if epoch+1 == 1:
+                    io.cprint(f"Epoch: {epoch + 1}, weight: {weights.device}, label_device: {label.device},  loss: {aug_loss.device}, augmentor: {augmentor.device}")
                 # Backward + Optimizer Augmentor
-                aug_loss.backward(retain_graph=True)
+                aug_loss.backward()
             
             # Classifier Loss
             optimizer_c.zero_grad()  # zero gradients

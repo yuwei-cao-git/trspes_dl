@@ -53,7 +53,9 @@ class AugmentorRotation(nn.Module):
         x = F.relu(self.bn2(self.fc2(x)))
         x = self.fc3(x)
         iden = x.new_tensor([1, 0, 0, 0])
+        print("iden: {iden.device}")
         x = x + iden
+        print("iden: {iden.device}")
 
         x, s = batch_quat_to_rotmat(x)
         x = x.view(-1, 3, 3)
@@ -122,11 +124,11 @@ class Augmentor(nn.Module):
 
         feat_d = x.view(-1, 1024, 1).repeat(1, 1, N)
         noise_d = noise.view(B, -1, 1).repeat(1, 1, N)
+        print(f"noise_d: {rotation.device}")
         feat_d = torch.cat([pointfeat, feat_d, noise_d], 1)
+        print(f"feat_d: {rotation.device}")
         displacement = self.dis(feat_d)
-        print(f"displacement: {displacement.device}")
         pt = raw_pt.transpose(2, 1).contiguous()
-        print(f"pt: {pt.device}")
         p1 = random.uniform(0, 1)
         possi = 0.0
         if p1 > possi:
@@ -134,14 +136,11 @@ class Augmentor(nn.Module):
         else:
             rotated_pt = pt.transpose(1, 2).contiguous()
         pt = rotated_pt
-        print(f"pt: {pt.device}")
         p2 = random.uniform(0, 1)
         if p2 > possi:
             displaced_pt = pt + displacement
             pt = displaced_pt  # Assign the new tensor to pt
-        print(f"pt: {pt.device}")
         if normal is not None:
             normal = (torch.bmm(normal, rotation)).transpose(1, 2).contiguous()
             pt = torch.cat([pt, normal], 1)
-        print(f"pt: {pt.device}")
         return pt
