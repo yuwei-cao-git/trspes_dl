@@ -19,7 +19,6 @@ parser = argparse.ArgumentParser(description='params to init the multi-gpu setti
     
 parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
 parser.add_argument('--batch_size', default=16, type=int, help='')
-parser.add_argument('--use_augmentor', action='store_true', help='')
 
 def main(params):
     # set up folder structure
@@ -73,7 +72,7 @@ if __name__ == "__main__":
     params = {
         "exp_name": "pn2_ddp_PA_7168_WEIGHTS_NOAUG2",  # experiment name
         "model": "pn2",  # model
-        "augmentor": args.use_augmentor,
+        "augmentor": True,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",

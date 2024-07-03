@@ -137,7 +137,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights)).to(current_device)
+    weights = torch.Tensor(np.array(weights)).cuda()
 
     wandb.alert(title="training status", text="start training")
     tic = time.perf_counter()
@@ -195,7 +195,7 @@ def train(params, io, trainset, testset):
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights).cuda()
                 if epoch+1 == 1:
-                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device},  loss: {aug_loss.device}")
+                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device},  loss: {aug_loss.device}, augmentor: {augmentor.device}")
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
             

@@ -53,5 +53,5 @@ def g_loss(y_true, y_pred, aug_y_pred, data, aug, weights, lamb=2e-4):
     aug_y_loss = calc_loss(y_true, aug_y_pred, weights).to(y_true.device)  # loss for augmented
     aug_pdist = pdist(data, aug).to(y_true.device).mul(lamb) # pairwise distance
     loss = torch.mean(LeakyReLU(y_loss - aug_y_loss + aug_pdist)) # final loss
-    print(f"y_loss: {y_loss.device}, aug_y_loss: {aug_y_loss.device},  loss: {loss.device}")
+    
     return loss
