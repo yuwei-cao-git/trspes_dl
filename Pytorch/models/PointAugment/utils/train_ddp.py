@@ -183,26 +183,31 @@ def train(params, io, trainset, testset):
             # Get batch size
             batch_size = data.size()[0]
             
-            classifier = classifier.train()
+            #classifier = classifier.train()
+            optimizer_c.zero_grad()  # zero gradients
+            # Classify
+            out_true = classifier(data)  # classify truth
 
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
                 noise = noise.cuda()
-                augmentor=augmentor.train()
-                print(augmentor)
-                optimizer_a.zero_grad()  # zero gradients
                 group = (data, noise)
                 aug_pc = augmentor(group)
-
-            # Classify
-            out_true = classifier(data)  # classify truth
+                out_aug = classifier(aug_pc.detach())  # classify augmented point cloud
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
+            else:
+                cls_loss = loss_utils.calc_loss(label, out_true, weights)
+            # Backward + Optimizer Classifier
+            cls_loss.backward()
+            optimizer_c.step()
 
             # Augmentor loss
             if params["augmentor"]:
                 with torch.autograd.detect_anomaly():
-                    out_aug = classifier(aug_pc)  # classify augmented point cloud
                     # Augmentor Loss
+                    optimizer_a.zero_grad()  # zero gradients
+                    out_aug = classifier(aug_pc)
                     aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
                     if epoch+1 == 1:
                         io.cprint(f"Epoch: {epoch + 1}, weights_version: {weights._version}, label_device: {label._version},  loss: {aug_loss._version}, augmentor: {augmentor._version}")
@@ -210,16 +215,6 @@ def train(params, io, trainset, testset):
                     
                     aug_loss.backward(retain_graph=True)
                     optimizer_a.step()
-            
-            # Classifier Loss
-            optimizer_c.zero_grad()  # zero gradients
-            if params["augmentor"]:
-                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
-            else:
-                cls_loss = loss_utils.calc_loss(label, out_true, weights)
-            # Backward + Optimizer Classifier
-            cls_loss.backward()
-            optimizer_c.step()
             
             # Update loss' and count
             if params["augmentor"]:
