@@ -192,11 +192,10 @@ def train(params, io, trainset, testset):
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
-                if epoch+1 == 1:
-                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device}, out_true: {out_true.device}, out_aug: {out_aug.device}, data: {data.device}, aug_pc: {aug_pc.device}, weights: {weights.device}")
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
-
+                if epoch+1 == 1:
+                    io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device},  loss: {aug_loss.device}")
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
             
