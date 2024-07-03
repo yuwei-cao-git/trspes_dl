@@ -30,6 +30,11 @@ from torch.utils.data.distributed import DistributedSampler
 torch.autograd.set_detect_anomaly(True)
 wandb.login()
 
+def print_trainable_variables(model):
+  for name, param in model.named_parameters():
+    if param.requires_grad:
+      print(f"Variable: {name}, Device: {param.device}, Version{param._version}")
+
 def get_resources(verbose=True):
 
     rank = 0

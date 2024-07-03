@@ -106,18 +106,15 @@ cd work
 git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trespecs_dl
 mkdir -p data/output
-tar -xy $project/data/*.tar -C ./data/
+tar -xf $project/data/*.tar -C ./data/
 
 pip install --no-index wandb
 ``` 
 
-$ salloc --time=1:0:0 --mem-per-cpu=3G --ntasks=1 --account=def-someuser
-salloc: Granted job allocation 1234567
-$ ...             # do some work
-$ exit            # terminate the allocation
-salloc: Relinquishing job allocation 1234567
+$ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=16G --ntasks=2
 
-7. Submit jobs
+
+1. Submit jobs
 
 wandb offline
 after finish:
