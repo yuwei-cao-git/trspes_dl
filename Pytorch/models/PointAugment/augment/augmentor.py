@@ -125,9 +125,9 @@ class Augmentor(nn.Module):
 
         feat_d = x.view(-1, 1024, 1).repeat(1, 1, N)
         noise_d = noise.view(B, -1, 1).repeat(1, 1, N)
-        print(f"noise_d: {rotation.device}")
+        print(f"noise_d: {noise_d.device}")
         feat_d = torch.cat([pointfeat, feat_d, noise_d], 1)
-        print(f"feat_d: {rotation.device}")
+        print(f"feat_d: {feat_d.device}")
         displacement = self.dis(feat_d)
         pt = raw_pt.transpose(2, 1).contiguous()
         p1 = random.uniform(0, 1)

@@ -197,9 +197,9 @@ def train(params, io, trainset, testset):
                 with torch.autograd.detect_anomaly():
                     out_aug = classifier(aug_pc)  # classify augmented point cloud
                     # Augmentor Loss
-                    aug_loss = loss_utils.g_loss(label, out_true, out_aug, data.clone(), aug_pc, weights)
+                    aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
                     if epoch+1 == 1:
-                        io.cprint(f"Epoch: {epoch + 1}, weight: {weights.device}, label_device: {label.device},  loss: {aug_loss.device}, augmentor: {augmentor.device}")
+                        io.cprint(f"Epoch: {epoch + 1}, weights_version: {weights._version}, label_device: {label._version},  loss: {aug_loss._version}, augmentor: {augmentor._version}")
                     # Backward + Optimizer Augmentor
                     
                     aug_loss.backward(retain_graph=True)
