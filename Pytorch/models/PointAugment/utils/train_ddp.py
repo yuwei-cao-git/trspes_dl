@@ -26,7 +26,7 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 
-warnings.filterwarnings("ignore")
+#warnings.filterwarnings("ignore")
 torch.autograd.set_detect_anomaly(True)
 wandb.login()
 
@@ -139,7 +139,8 @@ def train(params, io, trainset, testset):
     weights = params["train_weights"]
     weights = torch.Tensor(np.array(weights)).cuda()
 
-    wandb.alert(title="training status", text="start training")
+    if rank == 0:
+        wandb.alert(title="training status", text="start training")
     tic = time.perf_counter()
 
     print('From Rank: {}, ==> Preparing data..'.format(rank))
@@ -160,7 +161,8 @@ def train(params, io, trainset, testset):
         aug_pred = []
         train_true = []
         j=0
-        wandb.log({"epoch": epoch+1})
+        if rank == 0:
+            wandb.log({"epoch": epoch+1})
         # load data
         for data, label in tqdm(
             train_loader, desc="Training Total: ", leave=False, colour="cyan"

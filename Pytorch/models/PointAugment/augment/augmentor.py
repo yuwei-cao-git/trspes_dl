@@ -1,7 +1,6 @@
 # Adapted from https://github.com/liruihui/PointAugment/blob/master/Augment/augmentor.py
 import random
 
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
