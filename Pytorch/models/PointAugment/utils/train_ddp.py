@@ -193,7 +193,7 @@ def train(params, io, trainset, testset):
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
                 # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights).cuda()
                 if epoch+1 == 1:
                     io.cprint(f"Epoch: {epoch + 1}, label_device: {label.device},  loss: {aug_loss.device}")
                 # Backward + Optimizer Augmentor
