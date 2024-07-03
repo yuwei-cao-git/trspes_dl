@@ -185,6 +185,7 @@ def train(params, io, trainset, testset):
                 noise = (0.02 * torch.randn(batch_size, 1024))
                 noise = noise.cuda()
                 augmentor=augmentor.train()
+                print(augmentor)
                 optimizer_a.zero_grad()  # zero gradients
                 group = (data, noise)
                 aug_pc = augmentor(group)

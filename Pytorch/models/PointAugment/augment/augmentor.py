@@ -50,13 +50,11 @@ class AugmentorRotation(nn.Module):
 
     def forward(self, x):
         B = x.size()[0]
-        x = F.relu(self.bn1(self.fc1(x)))
-        x = F.relu(self.bn2(self.fc2(x)))
-        x = self.fc3(x)
+        x1 = F.relu(self.bn1(self.fc1(x)))
+        x2 = F.relu(self.bn2(self.fc2(x1)))
+        x3 = self.fc3(x2)
         iden = x.new_tensor([1, 0, 0, 0])
-        print(f"iden: {iden.device}")
         x = x + iden
-        print(f"x: {x.device}")
 
         x, s = batch_quat_to_rotmat(x)
         x = x.view(-1, 3, 3)
@@ -109,25 +107,19 @@ class Augmentor(nn.Module):
         B, C, N = data.size() # batch, channels, num points
         raw_pt = data[:, :3, :].contiguous()
         normal = data[:, 3:, :].transpose(1, 2).contiguous() if C > 3 else None
-        print(f"raw_pt_device: {raw_pt.device}")
         x = F.relu(self.bn1(self.conv1(raw_pt)))
         x = F.relu(self.bn2(self.conv2(x)))
         pointfeat = x
-        print(f"pointfeat: {pointfeat.device}")
         x = F.relu(self.bn3(self.conv3(x)))
         x = F.relu(self.bn4(self.conv4(x)))
         x = torch.max(x, 2, keepdim=True)[0]
-        print(f"x: {x.device}")
         feat_r = x.view(-1, 1024)
         feat_r = torch.cat([feat_r, noise], 1)
         rotation, scale = self.rot(feat_r)
-        print(f"rotation: {rotation.device}")
 
         feat_d = x.view(-1, 1024, 1).repeat(1, 1, N)
         noise_d = noise.view(B, -1, 1).repeat(1, 1, N)
-        print(f"noise_d: {noise_d.device}")
         feat_d = torch.cat([pointfeat, feat_d, noise_d], 1)
-        print(f"feat_d: {feat_d.device}")
         displacement = self.dis(feat_d)
         pt = raw_pt.transpose(2, 1).contiguous()
         p1 = random.uniform(0, 1)
