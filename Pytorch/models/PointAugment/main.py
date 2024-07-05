@@ -85,7 +85,7 @@ if __name__ == "__main__":
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
-        "epochs": 2,  # total epochs
+        "epochs": 100,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate
