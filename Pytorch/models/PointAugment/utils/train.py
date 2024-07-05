@@ -2,6 +2,7 @@ import os
 import random
 import warnings
 import wandb
+import time
 
 import numpy as np
 import pandas as pd
@@ -27,11 +28,13 @@ wandb.login()
 def train(params, io, trainset, testset):
     # log using wandb
     run = wandb.init(
-        project="tree_species_composition_dl_cc",
-        config={
+       config={
+            "model": params["model"],
+            "batch_size": params["batch_size"],
             "init_learning_rate_a": params["lr_a"],
             "inlearning_rate_c": params["lr_c"],
             "epoch": params["epochs"],
+            "batch size": params["batch_size"],
         },
     )
     # Run model
@@ -104,13 +107,6 @@ def train(params, io, trainset, testset):
 
     # Set initial triggertimes
     triggertimes = 0
-
-    epoch_list = []
-    training_losses_a = []
-    training_losses_c = []
-    training_r2s = []
-    validation_losses = []
-    validation_r2s = []
     
     weights = params["train_weights"]
     weights = torch.Tensor(np.array(weights)).to(device)
@@ -122,6 +118,7 @@ def train(params, io, trainset, testset):
         # augmentor.train()
         # classifier.train()
         # send_telegram(f"Epoch: {epoch}")
+        epoch_start=time.time()
         trainset_idx = list(range(len(trainset)))
         random.shuffle(trainset_idx)
         rem = len(trainset_idx) % params["batch_size"]
@@ -256,6 +253,10 @@ def train(params, io, trainset, testset):
         train_loss_c = float(train_loss_c) / count
         wandb.log({"class_loss": train_loss_c})
         
+        elapse_time = time.time() - epoch_start
+        wandb.log({
+                    "elapse_training_time": elapse_time
+            })
         # Set up Validation
         classifier.eval()
         with torch.no_grad():
@@ -413,6 +414,11 @@ def train(params, io, trainset, testset):
                     "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
                 })
+        
+        elapse_time = time.time() - epoch_start
+        wandb.log({
+                    "elapse_time": elapse_time
+            })
     wandb.finish()                             
 
 def test(params, io, testset):
