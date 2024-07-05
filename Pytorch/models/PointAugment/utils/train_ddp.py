@@ -193,6 +193,7 @@ def train(params, io, trainset, testset):
                 noise = (0.02 * torch.randn(batch_size, 1024))
                 noise = noise.cuda()
                 group = (data, noise)
+                optimizer_a.zero_grad()  # zero gradients
                 aug_pc = augmentor(group)
                 out_aug = classifier(aug_pc.detach())  # classify augmented point cloud
                 cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
@@ -206,7 +207,7 @@ def train(params, io, trainset, testset):
             if params["augmentor"]:
                 with torch.autograd.detect_anomaly():
                     # Augmentor Loss
-                    optimizer_a.zero_grad()  # zero gradients
+                    
                     out_aug = classifier(aug_pc)
                     aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
                     if epoch+1 == 1:
