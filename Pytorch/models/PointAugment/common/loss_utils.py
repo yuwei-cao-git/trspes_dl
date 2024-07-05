@@ -49,7 +49,6 @@ def g_loss(y_true, y_pred, aug_y_pred, data, aug, weights, lamb=2e-4):
     """Loss function for the generator (augmentor)"""
     pdist = nn.PairwiseDistance(p=1, keepdim=True)  # pairwise distance
     LeakyReLU = nn.LeakyReLU(0.0, inplace = False)  # leaky relu
-    y_true=y_true.clone()
     y_loss = calc_loss(y_true, y_pred, weights)  # loss for true
     aug_y_loss = calc_loss(y_true, aug_y_pred, weights)  # loss for augmented
     aug_pdist = pdist(data, aug).mul(lamb) # pairwise distance

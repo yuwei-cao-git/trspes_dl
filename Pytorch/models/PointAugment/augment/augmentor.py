@@ -13,7 +13,6 @@ def batch_quat_to_rotmat(q, out=None):
 
     if out is None:
         out = q.new_empty(B, 3, 3)
-        print(f"out: {out.device}")
 
     # 2 / squared quaternion 2-norm
     leng = torch.sum(q.pow(2), 1)
