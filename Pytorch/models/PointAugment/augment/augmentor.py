@@ -50,9 +50,9 @@ class AugmentorRotation(nn.Module):
 
     def forward(self, x):
         B = x.size()[0]
-        x1 = F.relu(self.bn1(self.fc1(x)))
-        x2 = F.relu(self.bn2(self.fc2(x1)))
-        x3 = self.fc3(x2)
+        x = F.relu(self.bn1(self.fc1(x)))
+        x = F.relu(self.bn2(self.fc2(x)))
+        x = self.fc3(x)
         iden = x.new_tensor([1, 0, 0, 0])
         x = x + iden
 
@@ -125,15 +125,13 @@ class Augmentor(nn.Module):
         p1 = random.uniform(0, 1)
         possi = 0.0
         if p1 > possi:
-            rotated_pt = torch.bmm(pt, rotation).transpose(1, 2).contiguous()
+            pt = torch.bmm(pt, rotation).transpose(1, 2).contiguous()
         else:
-            rotated_pt = pt.transpose(1, 2).contiguous()
-        pt2 = rotated_pt
+            pt = pt.transpose(1, 2).contiguous()
         p2 = random.uniform(0, 1)
         if p2 > possi:
-            displaced_pt = pt2 + displacement
-            pt2 = displaced_pt  # Assign the new tensor to pt
+            pt = pt + displacement
         if normal is not None:
             normal = (torch.bmm(normal, rotation)).transpose(1, 2).contiguous()
-            pt2 = torch.cat([pt2, normal], 1)
-        return pt2
+            pt = torch.cat([pt, normal], 1)
+        return pt
