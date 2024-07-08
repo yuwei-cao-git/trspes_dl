@@ -27,8 +27,8 @@ wandb.login()
 
 def train(params, io, trainset, testset):
     # log using wandb
-    run = wandb.init(
-       config={
+    wandb.init(
+        config={
             "model": params["model"],
             "batch_size": params["batch_size"],
             "init_learning_rate_a": params["lr_a"],
@@ -115,9 +115,7 @@ def train(params, io, trainset, testset):
     for epoch in tqdm(
         range(params["epochs"]), desc="Model Total: ", leave=False, colour="red"
     ):
-        # augmentor.train()
-        # classifier.train()
-        # send_telegram(f"Epoch: {epoch}")
+        wandb.alert(title="epoch", text=f"at epoch: {epoch+1}")
         epoch_start=time.time()
         trainset_idx = list(range(len(trainset)))
         random.shuffle(trainset_idx)
@@ -134,7 +132,6 @@ def train(params, io, trainset, testset):
         aug_pred = []
         train_true = []
         j=0
-        wandb.log({"epoch": epoch+1})
         
         for data, label in tqdm(
             train_loader, desc="Training Total: ", leave=False, colour="cyan"

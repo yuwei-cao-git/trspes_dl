@@ -72,7 +72,7 @@ if __name__ == "__main__":
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
     class_weights = [1/(100*n/11057) for n in n_samples]
     params = {
-        "exp_name": "pn2_PA_7168_WEIGHTS_AUG2",  # experiment name
+        "exp_name": "pn2_PA_7168_WEIGHTS_AUG0",  # experiment name
         "model": "pn2",  # model
         "augmentor": True,
         "batch_size": 32,  # batch size
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
         "test_path": r"../../../data/rmf_laz/val",
         "test_pickle": r"../../../data/rmf_laz/val/plots_comp.pkl",
-        "augment": True, # augment
+        "augment": False, # augment
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
