@@ -191,25 +191,20 @@ def train(params, io, trainset, testset):
                 
             classifier.train()
             if params["augmentor"]:
-                optimizer_a.zero_grad()  # zero gradients
                 group = (data, noise)
                 aug_pc = augmentor(group)
 
             # Classify
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
-                out_aug = classifier(aug_pc)  # classify augmented
-            
+                aug_pc_cls = aug_pc.clone()
+                out_aug = classifier(aug_pc_cls)  # classify augmented
                 # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
-
-                # Backward + Optimizer Augmentor
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc_cls, weights)
+                # Backward
                 aug_loss.backward(retain_graph=True)
-            # aug_loss.backward()
-            # optimizer_a.step()
            
             # Classifier Loss
-            optimizer_c.zero_grad()  # zero gradients
             if params["augmentor"]:
                 cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
             else:
@@ -220,8 +215,9 @@ def train(params, io, trainset, testset):
             cls_loss.backward()
             if params["augmentor"]:
                 optimizer_a.step()
+                optimizer_a.zero_grad()  # zero gradients
             optimizer_c.step()
-
+            optimizer_c.zero_grad()  # zero gradients
             # Update loss' and count
             if params["augmentor"]:
                 train_loss_a += aug_loss.item()
