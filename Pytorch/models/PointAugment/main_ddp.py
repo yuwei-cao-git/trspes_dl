@@ -71,7 +71,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     params = {
         "exp_name": "pn2_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
-        "model": "dgcnn",  # model
+        "model": "pn2",  # model
         "augmentor": False,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
