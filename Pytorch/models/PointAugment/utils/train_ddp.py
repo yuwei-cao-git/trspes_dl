@@ -58,7 +58,7 @@ def train(params, io, trainset, testset):
     
     # log using wandb
     runs = wandb.init(
-        project="tree_species_composition_dl_cc",
+        project="trspes_dl-Pytorch_models_PointAugment",
         #group=f'group-{rank}',
         #settings=wandb.Settings(start_method="fork"),
         config={
