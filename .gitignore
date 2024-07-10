@@ -18,3 +18,5 @@ pretrained/
 *.t7
 
 pytorch_lighning
+
+job_*.sh
