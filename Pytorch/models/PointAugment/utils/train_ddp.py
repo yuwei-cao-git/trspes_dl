@@ -318,23 +318,22 @@ def train(params, io, trainset, testset):
                 # Update count and test_loss
                 count += batch_size
                 test_loss += loss.item()
+                if rank == 0:
+                    # Append true/pred
+                    label_np = label.cpu().numpy()
+                    if label_np.ndim == 2:
+                        test_true.append(label_np)
+                    else:
+                        label_np = label_np[np.newaxis, :]
+                        test_true.append(label_np)
 
-                # Append true/pred
-                label_np = label.cpu().numpy()
-                if label_np.ndim == 2:
-                    test_true.append(label_np)
-                else:
-                    label_np = label_np[np.newaxis, :]
-                    test_true.append(label_np)
-
-                pred_np = F.softmax(output, dim=1)
-                pred_np = pred_np.detach().cpu().numpy()
-                if pred_np.ndim == 2:
-                    test_pred.append(pred_np)
-                else:
-                    pred_np = pred_np[np.newaxis, :]
-                    test_pred.append(pred_np)
-
+                    pred_np = F.softmax(output, dim=1)
+                    pred_np = pred_np.detach().cpu().numpy()
+                    if pred_np.ndim == 2:
+                        test_pred.append(pred_np)
+                    else:
+                        pred_np = pred_np[np.newaxis, :]
+                        test_pred.append(pred_np)
                 
             # Concatenate true/pred
             test_true = np.concatenate(test_true)
@@ -347,60 +346,61 @@ def train(params, io, trainset, testset):
             test_loss = float(test_loss) / count
             wandb.log({"val_loss": test_loss})
 
-        # print and save losses and r2
-        if params["augmentor"]:
-            io.cprint(f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
-
-            # Create output Dataframe
-            out_dict = {"epoch": [epoch + 1],
-                        "aug_loss": [train_loss_a],
-                        "class_loss": [train_loss_c],
-                        "train_r2": [train_r2],
-                        "val_loss": [test_loss],
-                        "val_r2": [val_r2]}
-            wandb.log({"aug_loss": train_loss_a})
-        else:
-            io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
-            # Create output Dataframe
-            out_dict = {"epoch": [epoch + 1],
-                        "class_loss": [train_loss_c],
-                        "train_r2": [train_r2],
-                        "val_loss": [test_loss],
-                        "val_r2": [val_r2]}
-            
-        out_df = pd.DataFrame.from_dict(out_dict)
-        
-        if not Path(f"checkpoints/{exp_name}/loss_r2.csv").exists:
-            loss_r2_df = pd.read_csv(f"checkpoints/{exp_name}/loss_r2.csv")
-            loss_r2_df = pd.concat([loss_r2_df, out_df])
-            loss_r2_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
-        else:
-            out_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
-        
-        # Save Best Model # move after apply addaptive learning, as if put it front, the best_test_loss=test loss, which is never excute the step
-        if test_loss < best_test_loss:
-            best_test_loss = test_loss
+        if rank == 0:
+            # print and save losses and r2
             if params["augmentor"]:
-                io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                io.cprint(f"Epoch: {epoch + 1}, Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
+
+                # Create output Dataframe
+                out_dict = {"epoch": [epoch + 1],
+                            "aug_loss": [train_loss_a],
+                            "class_loss": [train_loss_c],
+                            "train_r2": [train_r2],
+                            "val_loss": [test_loss],
+                            "val_r2": [val_r2]}
+                wandb.log({"aug_loss": train_loss_a})
             else:
-                io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
-                # wandb.alert(title="training status", text="archive better result!")
-            if rank==0:
+                io.cprint(f"Epoch: {epoch + 1}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}, Epoch time: {time.time() - epoch_start}")
+                # Create output Dataframe
+                out_dict = {"epoch": [epoch + 1],
+                            "class_loss": [train_loss_c],
+                            "train_r2": [train_r2],
+                            "val_loss": [test_loss],
+                            "val_r2": [val_r2]}
+                
+            out_df = pd.DataFrame.from_dict(out_dict)
+            
+            if not Path(f"checkpoints/{exp_name}/loss_r2.csv").exists:
+                loss_r2_df = pd.read_csv(f"checkpoints/{exp_name}/loss_r2.csv")
+                loss_r2_df = pd.concat([loss_r2_df, out_df])
+                loss_r2_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
+            else:
+                out_df.to_csv(f"checkpoints/{exp_name}/loss_r2.csv", index=False)
+            
+            # Save Best Model # move after apply addaptive learning, as if put it front, the best_test_loss=test loss, which is never excute the step
+            if test_loss < best_test_loss:
+                best_test_loss = test_loss
+                if params["augmentor"]:
+                    io.cprint(f"Training - Augmentor Loss: {train_loss_a}, Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Validation Loss: {test_loss}, R2: {val_r2}")
+                else:
+                    io.cprint(f"Training - Classifier Loss: {train_loss_c}, Training R2: {train_r2}, Best validation Loss: {test_loss}, R2: {val_r2}")
+                    # wandb.alert(title="training status", text="archive better result!")
+                
                 torch.save(
                     classifier.state_dict(), f"checkpoints/{exp_name}/models/best_mode.t7"
                 )
 
-            # delete old files
-            delete_files(f"checkpoints/{exp_name}/output", "*.csv")
+                # delete old files
+                delete_files(f"checkpoints/{exp_name}/output", "*.csv")
 
-            # Create CSV of best model output
-            create_comp_csv(
-                test_true.flatten(),
-                test_pred.round(2).flatten(),
-                params["classes"],
-                f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
-            )
-        
+                # Create CSV of best model output
+                create_comp_csv(
+                    test_true.flatten(),
+                    test_pred.round(2).flatten(),
+                    params["classes"],
+                    f"checkpoints/{exp_name}/output/outputs_epoch{epoch+1}.csv",
+                )
+            
         # Apply addaptive learning
         if params["adaptive_lr"] is True:
             if test_loss > best_test_loss:
@@ -413,34 +413,37 @@ def train(params, io, trainset, testset):
                 if params["augmentor"]:
                     scheduler1_a.step(test_loss)
                 scheduler1_c.step(test_loss)
-                if params["augmentor"]:
+                if rank == 0:
+                    if params["augmentor"]:
+                        wandb.log({
+                            "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
+                            "Trigger Times": triggertimes,
+                        })
                     wandb.log({
-                        "Scheduler Plateau Augmentor LR": scheduler1_a.optimizer.param_groups[0]['lr'],
-                        "Trigger Times": triggertimes,
+                            "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
+                            "Trigger Times": triggertimes,
                     })
-                wandb.log({
-                        "Scheduler Plateau Classifier LR": scheduler1_c.optimizer.param_groups[0]['lr'],
-                        "Trigger Times": triggertimes,
-                })
             else:
                 if params["augmentor"]:
                     scheduler2_a.step()
                 scheduler2_c.step()
-                if params["augmentor"]:
+                if rank == 0:
+                    if params["augmentor"]:
+                        wandb.log({
+                            "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
+                        })
                     wandb.log({
-                        "Scheduler Step Augmentor LR": scheduler2_a.optimizer.param_groups[0]['lr'],
-                    })
-                wandb.log({
-                    "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
+                        "Scheduler Step Classifier LR": scheduler2_c.optimizer.param_groups[0]['lr'],
 
-                })
+                    })
 
         epoch_time = time.time() - epoch_start
-        io.cprint(f"Epoch Training Time: {epoch_time}")
-        wandb.log({"epoch_time": epoch_time})
+        if rank == 0:
+            wandb.log({"epoch_time": epoch_time})
     tac = time.perf_counter()
-    wandb.alert(title="training status", text="training end!")
-    wandb.log({"Total Time": tac-tic})
+    if rank == 0:
+        wandb.alert(title="training status", text="training end!")
+        wandb.log({"Total Time": tac-tic})
     # clean up
     wandb.finish()
     dist.destroy_process_group()                          
