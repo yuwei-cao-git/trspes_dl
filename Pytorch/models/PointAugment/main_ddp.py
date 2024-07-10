@@ -79,7 +79,7 @@ if __name__ == "__main__":
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
         "test_path": r"../../../data/rmf_laz/val",
         "test_pickle": r"../../../data/rmf_laz/val/plots_comp.pkl",
-        "augment": True, # augment
+        "augment": False, # augment
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
         "lr_a": 1e-4,  # augmentor learning rate
-        "lr_c": 1e-4,  # classifier learning rate
+        "lr_c": 5e-4,  # classifier learning rate
         "adaptive_lr": True,  # adaptive learning rate
         "patience": 10,  # patience
         "step_size": 20,  # step size
