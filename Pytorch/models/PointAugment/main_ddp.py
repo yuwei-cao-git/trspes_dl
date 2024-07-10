@@ -70,16 +70,16 @@ if __name__ == "__main__":
     class_weights = [1/(100*n/11057) for n in n_samples]
     args = parser.parse_args()
     params = {
-        "exp_name": "dgcnn_ddp_PA_7168_WEIGHTS_NOAUG2",  # experiment name
+        "exp_name": "pn2_ddp_NOPA_7168_WEIGHTS_AUG2",  # experiment name
         "model": "dgcnn",  # model
-        "augmentor": True,
+        "augmentor": False,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights, # training weights
         "train_path": r"../../../data/rmf_laz/train",
         "train_pickle": r"../../../data/rmf_laz/train/plots_comp.pkl",
         "test_path": r"../../../data/rmf_laz/val",
         "test_pickle": r"../../../data/rmf_laz/val/plots_comp.pkl",
-        "augment": False, # augment
+        "augment": True, # augment
         "n_augs": 2, # number of augmentations
         "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
