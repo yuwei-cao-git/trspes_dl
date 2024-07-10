@@ -87,11 +87,11 @@ def train(params, io, trainset, testset):
     else:
         raise Exception("Model Not Implemented")
     # Wrap the model with DDP
-    classifier = DDP(classifier, device_ids=[current_device])
+    classifier = DDP(classifier, device_ids=[current_device], output_device=local_rank)
     # Augmentor
     if params["augmentor"]:
         augmentor = Augmentor().cuda()
-        augmentor = DDP(augmentor, device_ids=[current_device])
+        augmentor = DDP(augmentor, device_ids=[current_device], output_device=local_rank)
    
     # model parameters
     exp_name = params["exp_name"]
@@ -182,42 +182,35 @@ def train(params, io, trainset, testset):
 
             # Get batch size
             batch_size = data.size()[0]
-            
+            classifier.train()
+            optimizer_c.zero_grad()  # zero gradients
+
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
                 noise = noise.cuda()
-                augmentor.train()
-                
-            classifier.train()
-            if params["augmentor"]:
                 group = (data, noise)
+                augmentor.train()
+                optimizer_a.zero_grad()  # zero gradients
                 aug_pc = augmentor(group)
 
-            # Classify
+            # augmentor Loss
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
-                aug_pc_cls = aug_pc.clone()
-                out_aug = classifier(aug_pc_cls)  # classify augmented
-                # Augmentor Loss
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc_cls, weights)
-                # Backward
-                aug_loss.backward(retain_graph=True)
-           
-            # Classifier Loss
-            if params["augmentor"]:
-                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
+                out_aug = classifier(aug_pc)  # classify augmented
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug.detach(), weights)
             else:
                 cls_loss = loss_utils.calc_loss(label, out_true, weights)
-
-            # Backward + Optimizer Classifier
-            # cls_loss.backward(retain_graph=True)
-            cls_loss.backward()
-            if params["augmentor"]:
-                optimizer_a.step()
-                optimizer_a.zero_grad()  # zero gradients
+            cls_loss.backward(retain_graph=True)
             optimizer_c.step()
-            optimizer_c.zero_grad()  # zero gradients
+
+            # Augmentor Loss
+            if params["augmentor"]:
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
+                # Backward
+                aug_loss.backward(retain_graph=True)
+                optimizer_a.step()
+            
             # Update loss' and count
             if params["augmentor"]:
                 train_loss_a += aug_loss.item()
@@ -225,41 +218,42 @@ def train(params, io, trainset, testset):
             count = batch_size
             
             # Append true/pred
-            label_np = label.cpu().numpy()
-            if label_np.ndim == 2:
-                train_true.append(label_np)
-            else:
-                label_np = label_np[np.newaxis, :]
-                train_true.append(label_np)
-            
-            if params["augmentor"]:
-                aug_np = F.softmax(out_aug, dim=1)
-                aug_np = aug_np.detach().cpu().numpy()
-                if aug_np.ndim == 2:
-                    aug_pred.append(aug_np)
+            if rank==0:
+                label_np = label.cpu().numpy()
+                if label_np.ndim == 2:
+                    train_true.append(label_np)
                 else:
-                    aug_np = aug_np[np.newaxis, :]
-                    aug_pred.append(aug_np)
-            
-            true_np = F.softmax(out_true, dim=1)
-            true_np = true_np.detach().cpu().numpy()
-            if true_np.ndim ==2:
-                true_pred.append(true_np)
-            else:
-                true_np = true_np[np.newaxis, :]
-                true_pred.append(true_np)
-            if params["augmentor"]:
-                if epoch + 1 in [1, 50, 100, 150, 200, 250, 300]:
-                    if rank==0:
-                        if random.random() > 0.99:
-                            aug_pc_np = aug_pc.detach().cpu().numpy()
-                            true_pc_np = data.detach().cpu().numpy()
-                            try:
-                                write_las(aug_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_aug.laz")
-                                write_las(true_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_true.laz")
-                                j+=1
-                            except:
-                                j+=1
+                    label_np = label_np[np.newaxis, :]
+                    train_true.append(label_np)
+                
+                if params["augmentor"]:
+                    aug_np = F.softmax(out_aug, dim=1)
+                    aug_np = aug_np.detach().cpu().numpy()
+                    if aug_np.ndim == 2:
+                        aug_pred.append(aug_np)
+                    else:
+                        aug_np = aug_np[np.newaxis, :]
+                        aug_pred.append(aug_np)
+                
+                true_np = F.softmax(out_true, dim=1)
+                true_np = true_np.detach().cpu().numpy()
+                if true_np.ndim ==2:
+                    true_pred.append(true_np)
+                else:
+                    true_np = true_np[np.newaxis, :]
+                    true_pred.append(true_np)
+                if params["augmentor"]:
+                    if epoch + 1 in [1, 50, 100, 150, 200, 250, 300]:
+                        if rank==0:
+                            if random.random() > 0.99:
+                                aug_pc_np = aug_pc.detach().cpu().numpy()
+                                true_pc_np = data.detach().cpu().numpy()
+                                try:
+                                    write_las(aug_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_aug.laz")
+                                    write_las(true_pc_np[1], f"checkpoints/{exp_name}/output/laz/epoch{epoch + 1}_pc{j}_true.laz")
+                                    j+=1
+                                except:
+                                    j+=1
             batch_time = time.time() - start
             elapse_time = time.time() - epoch_start
             elapse_time = datetime.timedelta(seconds=elapse_time)
