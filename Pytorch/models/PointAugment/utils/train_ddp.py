@@ -142,7 +142,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights)).cuda()
+    weights = torch.Tensor(np.array(weights))
 
     if rank == 0:
         wandb.alert(title="training status", text="start training")
@@ -175,42 +175,51 @@ def train(params, io, trainset, testset):
             start = time.time()
 
             # Get data and label, move data and label to the same device as model
-            data, label = (data.cuda(), label.cuda().squeeze())
+            data, label = (data.cuda(non_blocking=True), label.cuda(non_blocking=True).squeeze())
 
             # Permute data into correct shape
             data = data.permute(0, 2, 1)  # adapt augmentor to fit with this permutation
 
             # Get batch size
             batch_size = data.size()[0]
-            classifier.train()
-            optimizer_c.zero_grad()  # zero gradients
+            
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
-                noise = noise.cuda()
+                noise = noise.cuda(non_blocking=True)
                 group = (data, noise)
                 augmentor.train()
+                
+            classifier.train()
+            if params["augmentor"]:
+                optimizer_a.zero_grad()  # zero gradients
                 aug_pc = augmentor(group)
 
-            # augmentor Loss
+            # Classify
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
-                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
-            else:
-                cls_loss = loss_utils.calc_loss(label, out_true, weights)
             
-            optimizer_c.zero_grad()  # zero gradients
-            cls_loss.backward(retain_graph=True)
-            optimizer_c.step()
+                # Augmentor Loss
+                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights.detach())
 
-            # Augmentor Loss
-            if params["augmentor"]:
-                aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
-                # Backward
-                optimizer_a.zero_grad()
+                # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
                 optimizer_a.step()
+            # aug_loss.backward()
+            # optimizer_a.step()
+           
+            # Classifier Loss
+            optimizer_c.zero_grad()  # zero gradients
+            if params["augmentor"]:
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights.detach())
+            else:
+                cls_loss = loss_utils.calc_loss(label, out_true, weights.detach())
+
+            # Backward + Optimizer Classifier
+            # cls_loss.backward(retain_graph=True)
+            cls_loss.backward()
+            optimizer_c.step()
             
             # Update loss' and count
             if params["augmentor"]:
