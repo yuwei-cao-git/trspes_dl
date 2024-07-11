@@ -197,30 +197,26 @@ def train(params, io, trainset, testset):
 
             # Classify
             out_true = classifier(data)  # classify truth
+            # Classifier Loss
+            optimizer_c.zero_grad()  # zero gradients
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights.detach())
+            else:
+                cls_loss = loss_utils.calc_loss(label, out_true, weights.detach())
+            # Backward + Optimizer Classifier
+            # cls_loss.backward(retain_graph=True)
+            cls_loss.backward(retain_graph=True)
+            optimizer_c.step()
             
+            if params["augmentor"]:
                 # Augmentor Loss
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights.detach())
 
                 # Backward + Optimizer Augmentor
                 aug_loss.backward(retain_graph=True)
                 optimizer_a.step()
-            # aug_loss.backward()
-            # optimizer_a.step()
            
-            # Classifier Loss
-            optimizer_c.zero_grad()  # zero gradients
-            if params["augmentor"]:
-                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights.detach())
-            else:
-                cls_loss = loss_utils.calc_loss(label, out_true, weights.detach())
-
-            # Backward + Optimizer Classifier
-            # cls_loss.backward(retain_graph=True)
-            cls_loss.backward()
-            optimizer_c.step()
-            
             # Update loss' and count
             if params["augmentor"]:
                 train_loss_a += aug_loss.item()
