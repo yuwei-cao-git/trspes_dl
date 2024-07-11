@@ -84,9 +84,7 @@ pip install ...
 6. Setting the virtualenv in remote machine
 ```
 $ module purge
-$ module load python/3.7.9 scipy-stack
-
-[name@server ~]$ module load python/3.10
+[name@server ~]$ module load python/3.10 scipy-stack
 [name@server ~]$ ENVDIR=/tmp/$RANDOM
 [name@server ~]$ virtualenv --no-download $ENVDIR
 [name@server ~]$ source $ENVDIR/bin/activate
@@ -112,11 +110,30 @@ pip install --no-index wandb
 ``` 
 
 $ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=16G --ntasks=2
+```
+module purge
+module load python/3.10 scipy-stack
+source ~/venv/bin/activate
 
+# Set environment variables
+export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
+export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MASTER_ADDR environment variable.
 
-1. Submit jobs
+cd $project/trspes_dl
+git pull
+cd Pytorch/models/PointAugment
+
+vi utils/train_ddp
+# wandb.login()
+# world_size=
+world_size=2
+# local_size=..
+local_size=2
+# num_workers..
+num_workers=8
 
 wandb offline
+python main_ddp.py --init_method tcp://$MASTER_ADDR:34567 --batch_size 8
+```
 after finish:
-wandb sync /home/yuwei-linux/code/trspes_dl/Pytorch/models/PointAugment/wandb/offline-run-20240614_203702-k8f101c2
-python wandb-test.py
+wandb sync ./wandb/offline-run-*
