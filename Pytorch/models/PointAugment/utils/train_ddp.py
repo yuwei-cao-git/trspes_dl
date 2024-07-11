@@ -184,23 +184,23 @@ def train(params, io, trainset, testset):
             batch_size = data.size()[0]
             classifier.train()
             optimizer_c.zero_grad()  # zero gradients
-
             # Augment
             if params["augmentor"]:
                 noise = (0.02 * torch.randn(batch_size, 1024))
                 noise = noise.cuda()
                 group = (data, noise)
                 augmentor.train()
-                optimizer_a.zero_grad()  # zero gradients
                 aug_pc = augmentor(group)
 
             # augmentor Loss
             out_true = classifier(data)  # classify truth
             if params["augmentor"]:
                 out_aug = classifier(aug_pc)  # classify augmented
-                cls_loss = loss_utils.d_loss(label, out_true, out_aug.detach(), weights)
+                cls_loss = loss_utils.d_loss(label, out_true, out_aug, weights)
             else:
                 cls_loss = loss_utils.calc_loss(label, out_true, weights)
+            
+            optimizer_c.zero_grad()  # zero gradients
             cls_loss.backward(retain_graph=True)
             optimizer_c.step()
 
@@ -208,6 +208,7 @@ def train(params, io, trainset, testset):
             if params["augmentor"]:
                 aug_loss = loss_utils.g_loss(label, out_true, out_aug, data, aug_pc, weights)
                 # Backward
+                optimizer_a.zero_grad()
                 aug_loss.backward(retain_graph=True)
                 optimizer_a.step()
             
