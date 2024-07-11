@@ -142,7 +142,7 @@ def train(params, io, trainset, testset):
     triggertimes = 0
     
     weights = params["train_weights"]
-    weights = torch.Tensor(np.array(weights))
+    weights = torch.Tensor(np.array(weights)).cuda()
 
     if rank == 0:
         wandb.alert(title="training status", text="start training")
