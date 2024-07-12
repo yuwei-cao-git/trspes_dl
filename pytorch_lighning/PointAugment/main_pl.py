@@ -9,7 +9,6 @@ from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
 
-import wandb
 from torch.utils.data import DataLoader
 from models.augmentor import Augmentor
 from models.dgcnn import DGCNN
@@ -86,7 +85,6 @@ def main(params):
     print("Starting...")
 
     # Initialize WandB, CSV Loggers
-    wandb.init(project="tree_species_composition_dl_cc")
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
     exp_name = params['exp_name']
     output_dirpath=os.path.join("checkpoints", exp_name)
@@ -123,7 +121,6 @@ def main(params):
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
         create_comp_csv(test_true, test_pred, params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
-    wandb.finish()
 
 if __name__=='__main__':
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
@@ -145,8 +142,8 @@ if __name__=='__main__':
         "epochs": args.max_epochs,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
         "optimizer_c": "adam",  # classifier optimizer
-        "lr_a": 1e-4,  # augmentor learning rate
-        "lr_c": 1e-4,  # classifier learning rate
+        "lr_a": args.lr,  # augmentor learning rate
+        "lr_c": args.lr,  # classifier learning rate
         "adaptive_lr": True,  # adaptive learning rate
         "patience": 10,  # patience
         "step_size": 20,  # step size
