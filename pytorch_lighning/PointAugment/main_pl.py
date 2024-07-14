@@ -22,7 +22,7 @@ from utils.tools import create_comp_csv, write_las
 from utils.augmentation import AugmentPointCloudsInPickle
 
 parser = argparse.ArgumentParser(description='pytorch-lightning parallel test')
-parser.add_argument('--lr', default=0.1, help='')
+parser.add_argument('--lr', type=float, default=0.1, help='')
 parser.add_argument('--max_epochs', type=int, default=4, help='')
 parser.add_argument('--batch_size', type=int, default=4, help='')
 parser.add_argument('--num_workers', type=int, default=8, help='')
