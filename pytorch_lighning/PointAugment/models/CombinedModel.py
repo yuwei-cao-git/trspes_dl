@@ -4,8 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler
 from common.loss_utils import g_loss, d_loss, calc_loss
-# from sklearn.metrics import r2_score
-from torcheval.metrics.functional import r2_score
+from sklearn.metrics import r2_score
+# from torcheval.metrics.functional import r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -111,20 +111,19 @@ class CombinedModel(L.LightningModule):
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
         self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": F.softmax(logits_data, dim=1)})
-        self.log('val_loss', loss, on_step=True, prog_bar=True, logger=True) # TODO: on_step or on_epoch is needed
+        self.log('val_loss', loss, on_step=True, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
 
         return {'val_class_loss': loss}
     
     def on_validation_epoch_end(self): 
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         
-        test_true=torch.stack([output['val_target'] for output in self.validation_step_outputs])
-        test_pred=torch.stack([output['val_pred'] for output in self.validation_step_outputs])
-        rounded_pred=test_pred.flatten().round(decimals=2)
-        val_r2 = r2_score(rounded_pred, test_true.flatten())
-        self.log("val_r2", val_r2)
+        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).detach().cpu().numpy().flatten()
+        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).detach().cpu().numpy().flatten().round(2)
+        val_r2 = r2_score(test_true, test_pred)
+        self.log("val_r2", val_r2, sync_dist=True)
 
-        self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True)
+        self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
             if self.triggertimes > self.params["patience"]:
