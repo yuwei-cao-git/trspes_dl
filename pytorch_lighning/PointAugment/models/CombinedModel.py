@@ -18,7 +18,7 @@ class CombinedModel(L.LightningModule):
         if self.use_augmentor:
             self.augmentor = augmentor
         self.classifier = classifier
-        self.class_weights = torch.Tensor(np.array(self.params["train_weights"])).cuda()
+        self.class_weights = torch.Tensor(np.array(self.params["train_weights"]))
         self.num_classes = len(self.params["classes"])
         self.exp_name=self.params["exp_name"]
         self.best_test_loss = np.inf
@@ -53,11 +53,11 @@ class CombinedModel(L.LightningModule):
             logits_data, logits_aug_data, aug_data = self(data, noise)
 
             # Compute losses
-            loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights)
+            loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights.cuda())
             
             self.manual_backward(loss_augmentor, retain_graph=True)
 
-            loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights)
+            loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights.cuda())
             self.manual_backward(loss_classifier)
 
             # Backward for augmentor
@@ -81,7 +81,7 @@ class CombinedModel(L.LightningModule):
             logits_data = self.classifier(data)
             
             # Compute loss
-            loss_classifier = calc_loss(target, logits_data, self.class_weights.to(self.device))
+            loss_classifier = calc_loss(target, logits_data, self.class_weights.cuda())
 
             # Backward for classifier
             opt_c.zero_grad()
