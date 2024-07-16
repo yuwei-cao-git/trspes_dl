@@ -120,7 +120,7 @@ def main(params):
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
-        create_comp_csv(test_true, test_pred, params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
+        create_comp_csv(test_true.flatten(), test_pred.flatten().round(2), params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
 
 if __name__=='__main__':
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]

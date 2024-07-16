@@ -118,9 +118,9 @@ class CombinedModel(L.LightningModule):
     def on_validation_epoch_end(self): 
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         
-        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).detach().cpu().numpy().flatten()
-        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).detach().cpu().numpy().flatten().round(2)
-        val_r2 = r2_score(test_true, test_pred)
+        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).detach().cpu().numpy()
+        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).detach().cpu().numpy()
+        val_r2 = r2_score(test_true.flatten(), test_pred.flatten().round(2))
         self.log("val_r2", val_r2, sync_dist=True)
 
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
