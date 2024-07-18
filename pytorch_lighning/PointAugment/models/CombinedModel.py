@@ -104,7 +104,7 @@ class CombinedModel(L.LightningModule):
     
     def validation_step(self, batch, batch_idx):
         data, target = batch
-        data, target = data.to(self.device), target.to(self.device)
+        data, target = (data.cuda(), target.cuda().squeeze())
         data = data.permute(0, 2, 1)
         # Forward pass
         logits_data = self(data)
@@ -116,8 +116,6 @@ class CombinedModel(L.LightningModule):
         # and the average across the epoch, to the progress bar and logger
         # When running in distributed mode, the validation and test step logging calls are synchronized across processes. 
         # This is done by adding sync_dist=True to all self.log calls in the validation and test step. 
-        val_r2_score = r2_score(preds.flatten().round(decimals=2), target.flatten())
-        self.log('val_r2_score', val_r2_score, prog_bar=True, logger=True, sync_dist=True) 
         self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": preds})
         self.log('val_loss', loss, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
         return {'val_class_loss': loss}
@@ -146,7 +144,7 @@ class CombinedModel(L.LightningModule):
 
     def test_step(self, batch, batch_idx):
         data, target = batch
-        data, target = data.to(self.device), target.to(self.device)
+        data, target = (data.cuda(), target.cuda().squeeze())
         data = data.permute(0, 2, 1)
         output = self.model(data)
         loss = F.mse_loss(F.softmax(output, dim=1), target)

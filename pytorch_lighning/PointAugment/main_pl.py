@@ -124,7 +124,7 @@ def main(params):
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
-        create_comp_csv(test_true, test_pred, params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
+        create_comp_csv(test_true.detach().cpu().numpy(), test_pred.detach().cpu().numpy(), params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
     if params["eval"]:
         trainer.test(model, val_dataloader)
 
