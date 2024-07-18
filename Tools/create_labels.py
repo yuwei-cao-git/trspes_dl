@@ -24,7 +24,7 @@ def create_labels_df(
     filenames = []
     perc_specs = []
     for file in files:
-        filename = str(file).split("\\")[-1]  # get filename
+        filename = str(file).split("/")[-1]  # get filename
         filenames.append(str(filename))  # append filenames
         plot = filename.split("_")[3]  # get plot number
         df1 = df.loc[df[group] == int(plot)]  # find plot nuber in df

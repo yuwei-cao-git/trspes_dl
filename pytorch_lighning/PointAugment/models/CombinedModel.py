@@ -4,8 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler
 from common.loss_utils import g_loss, d_loss, calc_loss
-from sklearn.metrics import r2_score
-# from torcheval.metrics.functional import r2_score
+from torcheval.metrics.functional import r2_score as r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -27,6 +26,7 @@ class CombinedModel(L.LightningModule):
         self.automatic_optimization=False
         self.best_test_outputs = None
         self.validation_step_outputs = []
+        self.save_hyperparameters()
 
     def forward(self, x, noise=None):
         if noise != None:
@@ -67,6 +67,9 @@ class CombinedModel(L.LightningModule):
             opt_c.step()
             opt_c.zero_grad()
             self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor}, prog_bar=True)
+            train_r2_score=r2_score(F.softmax(logits_data, dim=1).flatten().round(decimals=2), target.flatten())
+            aug_r2_score=r2_score(F.softmax(logits_aug_data, dim=1).flatten().round(decimals=2), target.flatten())
+            self.log_dict({"train_r2_score": train_r2_score, "train_aug_r2_score": aug_r2_score}, prog_bar=True)
             
             return {
                 'class_loss': loss_classifier, 
@@ -106,24 +109,28 @@ class CombinedModel(L.LightningModule):
         # Forward pass
         logits_data = self(data)
         # Compute cross-entropy loss why not cross_entropy loss?
-        loss = F.mse_loss(F.softmax(logits_data, dim=1), target)
+        preds = F.softmax(logits_data, dim=1)
+        loss = F.mse_loss(preds, target)
         
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
-        self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": F.softmax(logits_data, dim=1)})
-        self.log('val_loss', loss, on_step=True, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
-
+        # When running in distributed mode, the validation and test step logging calls are synchronized across processes. 
+        # This is done by adding sync_dist=True to all self.log calls in the validation and test step. 
+        val_r2_score = r2_score(preds.flatten().round(decimals=2), target.flatten())
+        self.log('val_r2_score', val_r2_score, prog_bar=True, logger=True, sync_dist=True) 
+        self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": preds})
+        self.log('val_loss', loss, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
         return {'val_class_loss': loss}
     
     def on_validation_epoch_end(self): 
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
-        
-        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).detach().cpu().numpy()
-        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).detach().cpu().numpy()
-        val_r2 = r2_score(test_true.flatten(), test_pred.flatten().round(2))
-        self.log("val_r2", val_r2, sync_dist=True)
-
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
+
+        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten()
+        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2)
+        val_r2 = r2_score(test_pred, test_true)
+        self.log("ave_val_r2", val_r2, sync_dist=True)
+
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
             if self.triggertimes > self.params["patience"]:
@@ -137,6 +144,15 @@ class CombinedModel(L.LightningModule):
         
         self.validation_step_outputs.clear()
 
+    def test_step(self, batch, batch_idx):
+        data, target = batch
+        data, target = data.to(self.device), target.to(self.device)
+        data = data.permute(0, 2, 1)
+        output = self.model(data)
+        loss = F.mse_loss(F.softmax(output, dim=1), target)
+        self.log("test_loss", loss, sync_dist=True)
+        return loss
+    
     def configure_optimizers(self):
         optimizers = [get_optimizer_c(self.params, self.classifier)]
         schedulers = [get_lr_scheduler(self.params, optimizers[0], self.change)]

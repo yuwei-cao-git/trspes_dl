@@ -3,12 +3,14 @@ import os
 import torch
 from torch.utils.data import Subset
 import random
+import lightning as L
 from lightning.pytorch import Trainer
 from lightning.pytorch import Callback
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import ModelCheckpoint
-
+from lightning.pytorch.strategies import DDPStrategy
+import wandb
 from torch.utils.data import DataLoader
 from models.augmentor import Augmentor
 from models.dgcnn import DGCNN
@@ -75,23 +77,25 @@ class PointCloudLogger(Callback):
         if random.random() > 0.99:  # Log 0.01 the batches at specified epochs (adjust as needed)
             true_pc_np = data.detach().cpu().numpy()
             self.write_las(true_pc_np[1], f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_true.laz")
+            wandb.log({"point_cloud": wandb.Object3D(true_pc_np)})
             if aug_data is not None:  # Handle logging augmented data if applicable
                 aug_data_np = aug_data.detach().cpu().numpy()
                 self.write_las(aug_data_np[1], f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_aug.laz")
-
+                wandb.log({"point_cloud": wandb.Object3D(aug_data_np)})
 
 
 def main(params):
     print("Starting...")
-
+    L.seed_everything(1)
     # Initialize WandB, CSV Loggers
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
     exp_name = params['exp_name']
-    output_dirpath=os.path.join("checkpoints", exp_name)
-    csv_logger = CSVLogger(save_dir=output_dirpath, name="loss_r2")
+    exp_dirpath=os.path.join("checkpoints", exp_name)
+    output_dir = os.path.join(exp_dirpath, "output")
+    csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
     
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(output_dirpath,"models"),  # Path to save checkpoints
+        dirpath=os.path.join(exp_dirpath,"models"),  # Path to save checkpoints
         filename="{epoch}-{val_loss:.2f}",  # Filename format (epoch-val_loss)
         monitor="val_loss",  # Metric to monitor for "best" model (can be any logged metric)
         mode="min",  # Save model with the lowest "val_loss" (change to "max" for maximizing metrics)
@@ -105,12 +109,12 @@ def main(params):
     model = CombinedModel(classifier, augmentor, params)
 
     train_dataloader, val_dataloader = prepare_dataset(params)
-
+    ddp = DDPStrategy(process_group_backend="nccl")
     # Instantiate the Trainer
     trainer = Trainer(
-        #gpus=params["n_gpus"],
-        #nodes=int(os.environ.get("SLURM_JOB_NUM_NODES")),
-        #progress_bar_refresh_rate=0,
+        accelerator="auto",
+        devices="auto",
+        strategy=ddp,
         max_epochs=params["epochs"],
         logger=[wandb_logger, csv_logger],
         callbacks=[checkpoint_callback, pointcloud_logger]
@@ -120,7 +124,9 @@ def main(params):
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
-        create_comp_csv(test_true.flatten(), test_pred.flatten().round(2), params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
+        create_comp_csv(test_true, test_pred, params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
+    if params["eval"]:
+        trainer.test(model, val_dataloader)
 
 if __name__=='__main__':
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
