@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler, get_lr_scheduler_step
 from common.loss_utils import g_loss, d_loss, calc_loss
-from torcheval.metrics.functional import r2_score as r2_score
+#from torcheval.metrics.functional import r2_score
+from torchmetrics.functional.regression import r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -118,7 +119,7 @@ class CombinedModel(L.LightningModule):
         loss = F.mse_loss(preds, target)
 
         val_r2_score=r2_score(preds.flatten().round(decimals=2), target.flatten())
-        self.log("val_r2", val_r2_score, sync_dist=True)
+        self.log("val_r2", val_r2_score, batch_size=self.params["batch_size"], on_step=True, on_epoch=True, sync_dist=True)
         
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
