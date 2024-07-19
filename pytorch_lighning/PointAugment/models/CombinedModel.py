@@ -2,7 +2,7 @@ import lightning as L
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler
+from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler, get_lr_scheduler_step
 from common.loss_utils import g_loss, d_loss, calc_loss
 from torcheval.metrics.functional import r2_score as r2_score
 import numpy as np
@@ -81,7 +81,7 @@ class CombinedModel(L.LightningModule):
         else:
             opt_c = self.optimizers()
             # Classifier forward pass for original data only
-            logits_data = self.classifier(data)
+            logits_data = self(data, None)
             
             # Compute loss
             loss_classifier = calc_loss(target, logits_data, self.class_weights.cuda())
@@ -91,26 +91,34 @@ class CombinedModel(L.LightningModule):
             self.manual_backward(loss_classifier)
             self.log('loss_classifier', loss_classifier, on_step=True, on_epoch=True, prog_bar=True, logger=True)
             opt_c.step()  # Update classifier parametersv
-            sch_c = self.lr_schedulers()
-            self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"]) # TODO: should maunally step schedular?
 
             return {'class_loss': loss_classifier}  # Return loss for logging
     
     def on_train_epoch_end(self):
-        # multiple schedulers
-        sch_a, sch_c = self.lr_schedulers()
-        self.lr_scheduler_step(sch_a, self.trainer.callback_metrics["val_loss"])
-        self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
+        if self.use_augmentor:
+            # multiple schedulers
+            sch_a, sch_c = self.lr_schedulers()
+            self.lr_scheduler_step(sch_a, self.trainer.callback_metrics["val_loss"])
+            self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
+            self.log('lr_aug', sch_a.optimizer.param_groups[0]['lr'])
+            self.log('lr_cla', sch_c.optimizer.param_groups[0]['lr'])
+        else:
+            sch_c = self.lr_schedulers()
+            self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
+            self.log('lr_cla', sch_c.optimizer.param_groups[0]['lr'])
     
     def validation_step(self, batch, batch_idx):
         data, target = batch
         data, target = (data.cuda(), target.cuda().squeeze())
         data = data.permute(0, 2, 1)
         # Forward pass
-        logits_data = self(data)
+        logits_data = self(data, None)
         # Compute cross-entropy loss why not cross_entropy loss?
         preds = F.softmax(logits_data, dim=1)
         loss = F.mse_loss(preds, target)
+
+        val_r2_score=r2_score(preds.flatten().round(decimals=2), target.flatten())
+        self.log("val_r2", val_r2_score, sync_dist=True)
         
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
@@ -118,16 +126,11 @@ class CombinedModel(L.LightningModule):
         # This is done by adding sync_dist=True to all self.log calls in the validation and test step. 
         self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": preds})
         self.log('val_loss', loss, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
-        return {'val_class_loss': loss}
+        return {'val_loss': loss}
     
     def on_validation_epoch_end(self): 
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
-
-        test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten()
-        test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2)
-        val_r2 = r2_score(test_pred, test_true)
-        self.log("ave_val_r2", val_r2, sync_dist=True)
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
@@ -138,6 +141,8 @@ class CombinedModel(L.LightningModule):
             self.triggertimes = 0
             # Update best model if current validation metric is better
             self.best_model_state_dict = self.state_dict()  # Save current model state
+            test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten()
+            test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2)
             self.best_test_outputs = (test_true, test_pred)  # Concatenate predictions and targets
         
         self.validation_step_outputs.clear()
@@ -153,11 +158,11 @@ class CombinedModel(L.LightningModule):
     
     def configure_optimizers(self):
         optimizers = [get_optimizer_c(self.params, self.classifier)]
-        schedulers = [get_lr_scheduler(self.params, optimizers[0], self.change)]
+        schedulers = [get_lr_scheduler_step(self.params, optimizers[0])]
 
         if self.use_augmentor:
             optimizers.append(get_optimizer_a(self.params, self.augmentor))
-            schedulers.append(get_lr_scheduler(self.params, optimizers[1], self.change))
+            schedulers.append(get_lr_scheduler_step(self.params, optimizers[1]))
 
         # Build the configuration
         optimizer_configs = []
@@ -171,7 +176,10 @@ class CombinedModel(L.LightningModule):
                     }
                 })
             else:
-                optimizer_configs.append(optimizer)
+                optimizer_configs.append({
+                    'optimizer': optimizer,
+                    'lr_scheduler': scheduler
+                })
         
         return optimizer_configs
 

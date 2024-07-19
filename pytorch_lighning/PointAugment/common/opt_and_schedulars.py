@@ -42,3 +42,9 @@ def get_lr_scheduler(params, optimizer, change):
         return scheduler
     else:
         return None
+    
+def get_lr_scheduler_step(params, optimizer):
+    scheduler = StepLR(optimizer,
+                    step_size=params['step_size'],
+                    gamma=0.1)
+    return scheduler
