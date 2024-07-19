@@ -119,7 +119,7 @@ class CombinedModel(L.LightningModule):
         loss = F.mse_loss(preds, target)
 
         val_r2_score=r2_score(preds.flatten().round(decimals=2), target.flatten())
-        self.log("val_r2", val_r2_score, batch_size=self.params["batch_size"], on_step=True, on_epoch=True, sync_dist=True)
+        self.log("val_r2", val_r2_score, batch_size=self.params["batch_size"], on_step=True, on_epoch=True)
         
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
