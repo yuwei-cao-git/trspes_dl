@@ -23,11 +23,12 @@ from utils.tools import (
 from utils.tools import create_comp_csv, write_las
 from utils.augmentation import AugmentPointCloudsInPickle
 
-parser = argparse.ArgumentParser(description='pytorch-lightning parallel test')
-parser.add_argument('--lr', type=float, default=0.1, help='')
-parser.add_argument('--max_epochs', type=int, default=4, help='')
-parser.add_argument('--batch_size', type=int, default=4, help='')
-parser.add_argument('--num_workers', type=int, default=8, help='')
+parser = argparse.ArgumentParser(description="pytorch-lightning parallel test")
+parser.add_argument("--lr", type=float, default=0.1, help="")
+parser.add_argument("--max_epochs", type=int, default=4, help="")
+parser.add_argument("--batch_size", type=int, default=4, help="")
+parser.add_argument("--num_workers", type=int, default=8, help="")
+
 
 def prepare_dataset(params):
     # Load datasets
@@ -42,45 +43,66 @@ def prepare_dataset(params):
     if params["augment"] == True:
         for i in range(params["n_augs"]):
             aug_trainset = AugmentPointCloudsInPickle(
-                train_data_path, 
+                train_data_path,
                 train_pickle,
             )
-            
-            trainset = torch.utils.data.ConcatDataset(
-                [trainset, aug_trainset]
-            )
-    train_loader = DataLoader(trainset, batch_size=params['batch_size'], shuffle=True,
-                              num_workers=params["num_workers"], sampler=None, collate_fn=None,
-                              drop_last=True,
-                              pin_memory=True)
-    
+
+            trainset = torch.utils.data.ConcatDataset([trainset, aug_trainset])
+    train_loader = DataLoader(
+        trainset,
+        batch_size=params["batch_size"],
+        shuffle=True,
+        num_workers=params["num_workers"],
+        sampler=None,
+        collate_fn=None,
+        drop_last=True,
+        pin_memory=True,
+    )
+
     test_data_path = os.path.join(params["test_path"], str(params["num_points"]))
     test_pickle = params["test_pickle"]
     testset = PointCloudsInPickle(test_data_path, test_pickle)
-    test_loader = DataLoader(testset, batch_size=params['batch_size'], shuffle=False,
-                              num_workers=params["num_workers"], sampler=None, collate_fn=None,
-                              drop_last=True,
-                              pin_memory=True)
-    
+    test_loader = DataLoader(
+        testset,
+        batch_size=params["batch_size"],
+        shuffle=False,
+        num_workers=params["num_workers"],
+        sampler=None,
+        collate_fn=None,
+        drop_last=True,
+        pin_memory=True,
+    )
+
     return train_loader, test_loader
+
 
 class PointCloudLogger(Callback):
     def __init__(self, exp_name, write_las_function):
         self.exp_name = exp_name
-        self.write_las = write_las_function  # Assuming write_las is a function to write LAZ files
+        self.write_las = (
+            write_las_function  # Assuming write_las is a function to write LAZ files
+        )
         self.log_epochs = [1, 50, 100, 150, 200]  # Epochs to log
 
     def on_batch_end(self, trainer, batch, batch_idx, pl_module, dataloader_idx):
         # Access data and potentially augmented point cloud from current batch
         data = batch["data"]
-        aug_data = batch["aug_data"] 
-        if random.random() > 0.99:  # Log 0.01 the batches at specified epochs (adjust as needed)
+        aug_data = batch["aug_data"]
+        if (
+            random.random() > 0.99
+        ):  # Log 0.01 the batches at specified epochs (adjust as needed)
             true_pc_np = data.detach().cpu().numpy()
-            self.write_las(true_pc_np[1], f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_true.laz")
+            self.write_las(
+                true_pc_np[1],
+                f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_true.laz",
+            )
             wandb.log({"point_cloud": wandb.Object3D(true_pc_np)})
             if aug_data is not None:  # Handle logging augmented data if applicable
                 aug_data_np = aug_data.detach().cpu().numpy()
-                self.write_las(aug_data_np[1], f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_aug.laz")
+                self.write_las(
+                    aug_data_np[1],
+                    f"checkpoints/{self.exp_name}/output/laz/epoch{trainer.current_epoch}_pc{batch_idx}_aug.laz",
+                )
                 wandb.log({"point_cloud": wandb.Object3D(aug_data_np)})
 
 
@@ -89,20 +111,22 @@ def main(params):
     L.seed_everything(1)
     # Initialize WandB, CSV Loggers
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
-    exp_name = params['exp_name']
-    exp_dirpath=os.path.join("checkpoints", exp_name)
+    exp_name = params["exp_name"]
+    exp_dirpath = os.path.join("checkpoints", exp_name)
     output_dir = os.path.join(exp_dirpath, "output")
     csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
-    
+
     checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join(exp_dirpath,"models"),  # Path to save checkpoints
+        dirpath=os.path.join(exp_dirpath, "models"),  # Path to save checkpoints
         filename="{epoch}-{val_loss:.2f}",  # Filename format (epoch-val_loss)
         monitor="val_loss",  # Metric to monitor for "best" model (can be any logged metric)
         mode="min",  # Save model with the lowest "val_loss" (change to "max" for maximizing metrics)
         save_top_k=1,  # Save only the single best model based on the monitored metric
     )
-    pointcloud_logger = PointCloudLogger(exp_name=exp_name, write_las_function=write_las)
-    
+    pointcloud_logger = PointCloudLogger(
+        exp_name=exp_name, write_las_function=write_las
+    )
+
     # initialize model
     augmentor = Augmentor()
     classifier = DGCNN(params, len(params["classes"]))
@@ -116,34 +140,42 @@ def main(params):
         devices="auto",
         strategy=ddp,
         max_epochs=params["epochs"],
-        logger=[wandb_logger, csv_logger],
-        callbacks=[checkpoint_callback, pointcloud_logger]
+        logger=[
+            wandb_logger,
+        ],  # csv_logger
+        callbacks=[checkpoint_callback, pointcloud_logger],
     )
 
     trainer.fit(model, train_dataloader, val_dataloader)
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
-        create_comp_csv(test_true.detach().cpu().numpy(), test_pred.detach().cpu().numpy(), params["classes"], f"checkpoints/{exp_name}/output/best_model_outputs.csv")
+        create_comp_csv(
+            test_true.detach().cpu().numpy(),
+            test_pred.detach().cpu().numpy(),
+            params["classes"],
+            f"checkpoints/{exp_name}/output/best_model_outputs.csv",
+        )
     if params["eval"]:
         trainer.test(model, val_dataloader)
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     n_samples = [1944, 5358, 2250, 2630, 3982, 2034, 347, 9569, 397]
-    class_weights = [1/(100*n/11057) for n in n_samples]
+    class_weights = [1 / (100 * n / 11057) for n in n_samples]
     args = parser.parse_args()
     params = {
         "exp_name": "DGCNN_pointaugment_7168_WEIGHTS_AUG2",  # experiment name
         "augmentor": True,
         "batch_size": args.batch_size,  # batch size
-        "train_weights": class_weights, # training weights
+        "train_weights": class_weights,  # training weights
         "train_path": r"../../data/rmf_laz/train",
         "train_pickle": r"../../data/rmf_laz/train/plots_comp.pkl",
         "test_path": r"../../data/rmf_laz/val",
         "test_pickle": r"../../data/rmf_laz/val/plots_comp.pkl",
-        "augment": True, # augment
-        "n_augs": 2, # number of augmentations
-        "classes": ['BF', 'BW', 'CE', 'LA', 'PT', 'PJ', 'PO', 'SB', 'SW'],  # classes
+        "augment": True,  # augment
+        "n_augs": 2,  # number of augmentations
+        "classes": ["BF", "BW", "CE", "LA", "PT", "PJ", "PO", "SB", "SW"],  # classes
         "n_gpus": torch.cuda.device_count(),  # number of gpus
         "epochs": args.max_epochs,  # total epochs
         "optimizer_a": "adam",  # augmentor optimizer,
@@ -161,7 +193,7 @@ if __name__=='__main__':
         "model_path": "",  # pretrained model path
         "cuda": True,  # use cuda
         "eval": False,  # run testing
-        "num_workers": args.num_workers # num_cpu_per_gpu
+        "num_workers": args.num_workers,  # num_cpu_per_gpu
     }
 
     mn = params["exp_name"]
