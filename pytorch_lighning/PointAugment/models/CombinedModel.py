@@ -48,13 +48,13 @@ class CombinedModel(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         data, target = batch
-        data, target = (data.cuda(), target.cuda().squeeze())
+        data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
         if self.use_augmentor:
             # Augmentor forward pass
             opt_c, opt_a = self.optimizers()
 
-            noise = (0.02 * torch.randn(data.size(0), 1024)).cuda()
+            noise = 0.02 * torch.randn(data.size(0), 1024)
             # Classifier forward pass for both original and augmented data
 
             logits_data, logits_aug_data, aug_data = self(data, noise)
@@ -66,13 +66,13 @@ class CombinedModel(L.LightningModule):
                 logits_aug_data,
                 data,
                 aug_data,
-                self.class_weights.cuda(),
+                self.class_weights,
             )
 
             self.manual_backward(loss_augmentor, retain_graph=True)
 
             loss_classifier = d_loss(
-                target, logits_data, logits_aug_data, self.class_weights.cuda()
+                target, logits_data, logits_aug_data, self.class_weights
             )
             self.manual_backward(loss_classifier)
 
@@ -144,7 +144,7 @@ class CombinedModel(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         data, target = batch
-        data, target = (data.cuda(), target.cuda().squeeze())
+        data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
         # Forward pass
         logits_data = self(data, None)
@@ -202,6 +202,12 @@ class CombinedModel(L.LightningModule):
                 )
                 .flatten()
                 .round(decimals=2)
+            )
+            self.log(
+                "ave_val_r2",
+                r2_score(test_pred, test_true),
+                prog_bar=True,
+                sync_dist=True,
             )
             self.best_test_outputs = (
                 test_true,

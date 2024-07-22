@@ -136,13 +136,8 @@ def main(params):
     ddp = DDPStrategy(process_group_backend="nccl")
     # Instantiate the Trainer
     trainer = Trainer(
-        accelerator="auto",
-        devices="auto",
-        strategy=ddp,
         max_epochs=params["epochs"],
-        logger=[
-            wandb_logger,
-        ],  # csv_logger
+        logger=[wandb_logger, csv_logger],  #
         callbacks=[checkpoint_callback, pointcloud_logger],
     )
 
