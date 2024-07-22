@@ -70,7 +70,7 @@ class CombinedModel(L.LightningModule):
             opt_c.zero_grad()
             self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor}, prog_bar=True)
             train_r2_score=r2_score(F.softmax(logits_data, dim=1).flatten().round(decimals=2), target.flatten())
-            self.log("train_r2_score", train_r2_score, on_step=True, on_epoch=True, prog_bar=True)
+            self.log("train_r2_score", train_r2_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
             
             return {
                 'class_loss': loss_classifier, 
