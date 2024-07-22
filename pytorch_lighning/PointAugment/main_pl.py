@@ -113,8 +113,8 @@ def main(params):
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
     exp_name = params["exp_name"]
     exp_dirpath = os.path.join("checkpoints", exp_name)
-    output_dir = os.path.join(exp_dirpath, "output")
-    csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
+    # output_dir = os.path.join(exp_dirpath, "output")
+    # csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(exp_dirpath, "models"),  # Path to save checkpoints
@@ -133,11 +133,11 @@ def main(params):
     model = CombinedModel(classifier, augmentor, params)
 
     train_dataloader, val_dataloader = prepare_dataset(params)
-    ddp = DDPStrategy(process_group_backend="nccl")
+    # ddp = DDPStrategy(process_group_backend="nccl")
     # Instantiate the Trainer
     trainer = Trainer(
         max_epochs=params["epochs"],
-        logger=[wandb_logger, csv_logger],  #
+        logger=[wandb_logger],  # csv_logger
         callbacks=[checkpoint_callback, pointcloud_logger],
     )
 
