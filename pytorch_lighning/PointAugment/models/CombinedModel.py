@@ -6,6 +6,7 @@ from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_s
 from common.loss_utils import g_loss, d_loss, calc_loss
 #from torcheval.metrics.functional import r2_score
 from torchmetrics.functional.regression import r2_score
+from sklearn.metrics import r2_score as sk_r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -141,10 +142,10 @@ class CombinedModel(L.LightningModule):
             self.triggertimes = 0
             # Update best model if current validation metric is better
             self.best_model_state_dict = self.state_dict()  # Save current model state
-            test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten()
-            test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2)
+            test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten().detach().cpu().numpy()
+            test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2).detach().cpu().numpy()
             self.best_test_outputs = (test_true, test_pred)  # Concatenate predictions and targets
-            self.log("best_val_r2", r2_score(test_pred, test_true), prog_bar=True, sync_dist=True)
+            self.log("best_val_r2", sk_r2_score(test_true, test_pred))
 
         self.validation_step_outputs.clear()
 

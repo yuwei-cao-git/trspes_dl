@@ -113,8 +113,9 @@ def main(params):
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
     exp_name = params["exp_name"]
     exp_dirpath = os.path.join("checkpoints", exp_name)
-    # output_dir = os.path.join(exp_dirpath, "output")
-    # csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
+    output_dir = os.path.join(exp_dirpath, "output")
+    os.mkdir(output_dir)
+    csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(exp_dirpath, "models"),  # Path to save checkpoints
@@ -137,7 +138,7 @@ def main(params):
     # Instantiate the Trainer
     trainer = Trainer(
         max_epochs=params["epochs"],
-        logger=[wandb_logger],  # csv_logger
+        logger=[wandb_logger, csv_logger],  # csv_logger
         callbacks=[checkpoint_callback, pointcloud_logger],
     )
 
@@ -146,8 +147,8 @@ def main(params):
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
         create_comp_csv(
-            test_true.detach().cpu().numpy(),
-            test_pred.detach().cpu().numpy(),
+            test_true,
+            test_pred,
             params["classes"],
             f"checkpoints/{exp_name}/output/best_model_outputs.csv",
         )
