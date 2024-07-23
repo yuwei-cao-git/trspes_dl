@@ -6,7 +6,6 @@ from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_s
 from common.loss_utils import g_loss, d_loss, calc_loss
 #from torcheval.metrics.functional import r2_score
 from torchmetrics.regression import R2Score
-from sklearn.metrics import r2_score as sk_r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -61,6 +60,7 @@ class CombinedModel(L.LightningModule):
             self.manual_backward(loss_augmentor, retain_graph=True)
 
             loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights.cuda())
+            train_r2 = self.r2_metric(torch.round(F.softmax(logits_data, dim=1)), target)
             self.manual_backward(loss_classifier)
 
             # Backward for augmentor
@@ -69,11 +69,7 @@ class CombinedModel(L.LightningModule):
             # Backward for classifier
             opt_c.step()
             opt_c.zero_grad()
-            self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor}, prog_bar=True)
-            preds = torch.round(torch.flatten(F.softmax(logits_data, dim=1)), decimals=2)
-            target = torch.flatten(target)
-            train_r2_score = self.r2_metric(preds, target)
-            self.log("train_r2_score", train_r2_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
+            self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
             
             return {
                 'class_loss': loss_classifier, 
@@ -99,6 +95,8 @@ class CombinedModel(L.LightningModule):
             return {'class_loss': loss_classifier}  # Return loss for logging
     
     def on_train_epoch_end(self):
+        # Aggregate predictions and targets
+
         if self.use_augmentor:
             # multiple schedulers
             sch_a, sch_c = self.lr_schedulers()
@@ -130,11 +128,10 @@ class CombinedModel(L.LightningModule):
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
 
-        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
-        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
-        test_true=torch.flatten(test_true)
-        test_pred=torch.round(torch.flatten(test_pred), decimals=2)
-        self.log("ave_val_r2", self.r2_metric(test_true, test_pred), sync_dist=True)
+        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0).flatten()
+        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0).flatten()
+        test_pred=torch.round(test_pred, decimals=2)
+        self.log("ave_val_r2", self.r2_metric(test_pred, test_true), sync_dist=True)
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
