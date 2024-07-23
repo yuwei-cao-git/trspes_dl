@@ -1,5 +1,6 @@
 import argparse
 import os
+from pathlib import Path
 import torch
 from torch.utils.data import Subset
 import random
@@ -113,8 +114,8 @@ def main(params):
     wandb_logger = WandbLogger(project="tree_species_composition_dl_pl")
     exp_name = params["exp_name"]
     exp_dirpath = os.path.join("checkpoints", exp_name)
-    output_dir = os.path.join(exp_dirpath, "output")
-    os.makedirs(output_dir)
+    output_dir = Path(os.path.join(exp_dirpath, "output"))
+    output_dir.mkdir(parents=True, exist_ok=True) 
     csv_logger = CSVLogger(save_dir=output_dir, name="loss_r2")
 
     checkpoint_callback = ModelCheckpoint(
