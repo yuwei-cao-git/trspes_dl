@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler, get_lr_scheduler_step
 from common.loss_utils import g_loss, d_loss, calc_loss
 #from torcheval.metrics.functional import r2_score
-from torchmetrics.functional.regression import r2_score
+from torchmetrics.regression import R2Score
 from sklearn.metrics import r2_score as sk_r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
@@ -28,7 +28,8 @@ class CombinedModel(L.LightningModule):
         self.automatic_optimization=False
         self.best_test_outputs = None
         self.validation_step_outputs = []
-        self.save_hyperparameters()
+        # self.save_hyperparameters()
+        self.r2_metric = R2Score()
 
     def forward(self, x, noise=None):
         if noise != None:
@@ -69,7 +70,7 @@ class CombinedModel(L.LightningModule):
             opt_c.step()
             opt_c.zero_grad()
             self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor}, prog_bar=True)
-            train_r2_score=r2_score(F.softmax(logits_data, dim=1).flatten().round(decimals=2), target.flatten())
+            train_r2_score=self.r2_metric(F.softmax(logits_data, dim=1).flatten().round(decimals=2), target.flatten())
             self.log("train_r2_score", train_r2_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
             
             return {
@@ -118,7 +119,7 @@ class CombinedModel(L.LightningModule):
         preds = F.softmax(logits_data, dim=1)
         loss = F.mse_loss(preds, target)
 
-        val_r2_score=r2_score(preds.flatten().round(decimals=2), target.flatten())
+        val_r2_score=self.r2_metric(preds.flatten().round(decimals=2), target.flatten())
         self.log("val_r2", val_r2_score, batch_size=self.params["batch_size"], on_step=True, on_epoch=True, sync_dist=True)
         
         # logs metrics for each training_step,
@@ -132,7 +133,10 @@ class CombinedModel(L.LightningModule):
     def on_validation_epoch_end(self): 
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
-
+        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
+        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
+        test_pred=test_pred.round(decimals=2)
+        self.log("ave_val_r2", self.r2_metric(test_true, test_pred))
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
             if self.triggertimes > self.params["patience"]:
@@ -142,10 +146,7 @@ class CombinedModel(L.LightningModule):
             self.triggertimes = 0
             # Update best model if current validation metric is better
             self.best_model_state_dict = self.state_dict()  # Save current model state
-            test_true=(torch.stack([output['val_target'] for output in self.validation_step_outputs])).flatten().detach().cpu().numpy()
-            test_pred=(torch.stack([output['val_pred'] for output in self.validation_step_outputs])).flatten().round(decimals=2).detach().cpu().numpy()
             self.best_test_outputs = (test_true, test_pred)  # Concatenate predictions and targets
-            self.log("best_val_r2", sk_r2_score(test_true, test_pred))
 
         self.validation_step_outputs.clear()
 
