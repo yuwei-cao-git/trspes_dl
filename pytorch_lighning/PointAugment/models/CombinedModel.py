@@ -121,10 +121,7 @@ class CombinedModel(L.LightningModule):
         preds = F.softmax(logits_data, dim=1)
         loss = F.mse_loss(preds, target)
         
-        # logs metrics for each training_step,
-        # and the average across the epoch, to the progress bar and logger
-        # When running in distributed mode, the validation and test step logging calls are synchronized across processes. 
-        # This is done by adding sync_dist=True to all self.log calls in the validation and test step. 
+        # logs metrics for each training_step
         self.validation_step_outputs.append({"val_loss": loss, "val_target": target, "val_pred": preds})
         self.log('val_loss', loss, prog_bar=True, logger=True, sync_dist=True) # TODO: on_step or on_epoch is needed
         return {'val_loss': loss}
