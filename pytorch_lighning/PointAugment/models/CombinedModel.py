@@ -70,7 +70,9 @@ class CombinedModel(L.LightningModule):
             opt_c.step()
             opt_c.zero_grad()
             self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor}, prog_bar=True)
-            train_r2_score=self.r2_metric(F.softmax(logits_data, dim=1).flatten().round(decimals=2), target.flatten())
+            preds=F.softmax(logits_data, dim=1).flatten().round(decimals=2)
+            true_label=target.flatten()
+            train_r2_score=self.r2_metric(preds, true_label)
             self.log("train_r2_score", train_r2_score, on_step=True, on_epoch=True, prog_bar=True, sync_dist=True)
             
             return {
@@ -118,9 +120,6 @@ class CombinedModel(L.LightningModule):
         # Compute cross-entropy loss why not cross_entropy loss?
         preds = F.softmax(logits_data, dim=1)
         loss = F.mse_loss(preds, target)
-
-        val_r2_score=self.r2_metric(preds.flatten().round(decimals=2), target.flatten())
-        self.log("val_r2", val_r2_score, batch_size=self.params["batch_size"], on_step=True, on_epoch=True, sync_dist=True)
         
         # logs metrics for each training_step,
         # and the average across the epoch, to the progress bar and logger
@@ -135,7 +134,8 @@ class CombinedModel(L.LightningModule):
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
         test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
         test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
-        test_pred=test_pred.round(decimals=2)
+        test_true=test_true.flatten()
+        test_pred=test_pred.flatten().round(decimals=2)
         self.log("ave_val_r2", self.r2_metric(test_true, test_pred))
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
