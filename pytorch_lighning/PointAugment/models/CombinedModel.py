@@ -60,7 +60,7 @@ class CombinedModel(L.LightningModule):
             self.manual_backward(loss_augmentor, retain_graph=True)
 
             loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights.cuda())
-            train_r2 = self.r2_metric(torch.round(F.softmax(logits_data, dim=1)), target)
+            train_r2 = self.r2_metric(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
             self.manual_backward(loss_classifier)
 
             # Backward for augmentor
