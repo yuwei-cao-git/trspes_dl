@@ -119,7 +119,7 @@ module purge
 module load python/3.10 scipy-stack
 source ~/venv/bin/activate
 
-$ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=16G --ntasks=2
+$ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=32G --ntasks=2
 ```
 # Set environment variables
 export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
