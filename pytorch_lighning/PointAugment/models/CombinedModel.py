@@ -6,6 +6,7 @@ from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_s
 from common.loss_utils import g_loss, d_loss, calc_loss
 #from torcheval.metrics.functional import r2_score
 from torchmetrics.regression import R2Score
+from sklearn.metrics import r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -128,10 +129,11 @@ class CombinedModel(L.LightningModule):
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
 
-        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0).flatten()
-        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0).flatten()
-        test_pred=torch.round(test_pred, decimals=2)
-        self.log("ave_val_r2", self.r2_metric(test_pred, test_true), sync_dist=True)
+        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0).detach().cpu().numpy()
+        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0).detach().cpu().numpy()
+        test_pred=test_pred.flatten().round(2)
+        test_true=test_true.flatten()
+        self.log("ave_val_r2", r2_score(test_true, test_pred))
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
