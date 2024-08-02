@@ -23,6 +23,7 @@ from utils.tools import (
 )
 from utils.tools import create_comp_csv, write_las
 from utils.augmentation import AugmentPointCloudsInPickle
+from sklearn.metrics import r2_score
 
 parser = argparse.ArgumentParser(description="pytorch-lightning parallel test")
 parser.add_argument("--lr", type=float, default=0.1, help="")
@@ -147,6 +148,10 @@ def main(params):
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
+        test_pred=test_pred.detach().cpu().numpy()
+        test_true=test_true.detach().cpu().numpy()
+        r2_score=r2_score(test_true,test_pred)
+        wandb.log({"sk_r2": r2_score})
         create_comp_csv(
             test_true,
             test_pred,

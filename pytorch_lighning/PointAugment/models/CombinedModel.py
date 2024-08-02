@@ -4,9 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler, get_lr_scheduler_step
 from common.loss_utils import g_loss, d_loss, calc_loss
-#from torcheval.metrics.functional import r2_score
-from torchmetrics.regression import R2Score
-from sklearn.metrics import r2_score
+from torcheval.metrics.functional import r2_score
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -29,7 +27,6 @@ class CombinedModel(L.LightningModule):
         self.best_test_outputs = None
         self.validation_step_outputs = []
         # self.save_hyperparameters()
-        self.r2_metric = R2Score()
 
     def forward(self, x, noise=None):
         if noise != None:
@@ -57,20 +54,18 @@ class CombinedModel(L.LightningModule):
 
             # Compute losses
             loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights.cuda())
-            
+            train_r2 = r2_score(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
             self.manual_backward(loss_augmentor, retain_graph=True)
 
             loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights.cuda())
-            train_r2 = self.r2_metric(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
             self.manual_backward(loss_classifier)
-
+            self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
             # Backward for augmentor
             opt_a.step()  # Update augmentor parameters
             opt_a.zero_grad()
             # Backward for classifier
             opt_c.step()
             opt_c.zero_grad()
-            self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
             
             return {
                 'class_loss': loss_classifier, 
@@ -129,11 +124,11 @@ class CombinedModel(L.LightningModule):
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
 
-        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0).detach().cpu().numpy()
-        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0).detach().cpu().numpy()
+        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
+        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
         test_pred=test_pred.flatten().round(2)
         test_true=test_true.flatten()
-        self.log("ave_val_r2", r2_score(test_true, test_pred))
+        self.log("ave_val_r2", r2_score(test_pred, test_true))
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
