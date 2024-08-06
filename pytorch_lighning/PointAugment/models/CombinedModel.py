@@ -124,11 +124,11 @@ class CombinedModel(L.LightningModule):
         last_epoch_val_loss = torch.mean(torch.stack([output['val_loss'] for output in self.validation_step_outputs]))
         self.log("ave_val_loss", last_epoch_val_loss, prog_bar=True, sync_dist=True)
 
-        test_true=torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
-        test_pred=torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
+        test_true = torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
+        test_pred = torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
         self.log_dict({"test batch size": test_true.shape[0], "pred batch size": test_pred.shape[0]})
-        test_pred=test_pred.flatten().round(2)
-        test_true=test_true.flatten()
+        test_pred = torch.round(test_pred.flatten(), decimals=2)
+        test_true = test_true.flatten()
         self.log("ave_val_r2", r2_score(test_pred, test_true))
 
         if last_epoch_val_loss > self.best_test_loss:
