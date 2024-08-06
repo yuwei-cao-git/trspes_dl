@@ -39,7 +39,7 @@ class CombinedModel(L.LightningModule):
              "R2 Accuracy": r2
              })
 
-        self.save_hyperparameters(ignore=["loss_weight"])
+        #self.save_hyperparameters(ignore=["loss_weight"])
 
     def forward(self, x, noise=None):
         if noise != None:
