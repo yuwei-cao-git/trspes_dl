@@ -19,7 +19,7 @@ class CombinedModel(L.LightningModule):
         self.classifier = classifier
         self.num_classes = len(self.params["classes"])
         #Weighted loss
-        self.class_weights = torch.tensor(self.params["train_weights"], device="cuda", dtype=torch.float)
+        self.class_weights = torch.tensor(self.params["train_weights"], dtype=torch.float)
         self.exp_name=self.params["exp_name"]
         self.best_test_loss = np.inf
         self.triggertimes = 0
@@ -56,7 +56,7 @@ class CombinedModel(L.LightningModule):
         data, target = batch
         data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
-        
+        self.class_weights.cuda()
         # Augmentor forward pass
         opt_c, opt_a = self.optimizers()
 
