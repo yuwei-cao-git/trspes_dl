@@ -70,7 +70,7 @@ class CombinedModel(L.LightningModule):
 
         loss_classifier = d_loss(target, logits_data, logits_aug_data, class_weights)
         self.manual_backward(loss_classifier)
-        self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
+        self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True, sync_dist=True)
         # Backward for augmentor
         opt_a.step()  # Update augmentor parameters
         opt_a.zero_grad()
@@ -114,10 +114,9 @@ class CombinedModel(L.LightningModule):
 
         test_true = torch.cat([output['val_target'] for output in self.validation_step_outputs], dim=0)
         test_pred = torch.cat([output['val_pred'] for output in self.validation_step_outputs], dim=0)
-        self.log_dict({"test batch size": test_true.shape[0], "pred batch size": test_pred.shape[0]})
         test_pred = torch.round(test_pred.flatten(), decimals=2)
         test_true = test_true.flatten()
-        self.log("ave_val_r2", torchmetrics.functional.r2_score(test_pred, test_true))
+        self.log("ave_val_r2", torchmetrics.functional.r2_score(test_pred, test_true), sync_dist=True)
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
