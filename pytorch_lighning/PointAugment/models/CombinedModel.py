@@ -18,8 +18,6 @@ class CombinedModel(L.LightningModule):
             self.augmentor = augmentor
         self.classifier = classifier
         self.num_classes = len(self.params["classes"])
-        #Weighted loss
-        self.class_weights = torch.tensor(self.params["train_weights"], dtype=torch.float)
         self.exp_name=self.params["exp_name"]
         self.best_test_loss = np.inf
         self.triggertimes = 0
@@ -56,7 +54,7 @@ class CombinedModel(L.LightningModule):
         data, target = batch
         data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
-        self.class_weights.cuda()
+        class_weights = torch.tensor(self.params["train_weights"], device="cuda", dtype=torch.float)
         # Augmentor forward pass
         opt_c, opt_a = self.optimizers()
 
@@ -66,11 +64,11 @@ class CombinedModel(L.LightningModule):
         logits_data, logits_aug_data, aug_data = self(data, noise)
 
         # Compute losses
-        loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights)
+        loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, class_weights)
         train_r2 = torchmetrics.functional.r2_score(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
         self.manual_backward(loss_augmentor, retain_graph=True)
 
-        loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights)
+        loss_classifier = d_loss(target, logits_data, logits_aug_data, class_weights)
         self.manual_backward(loss_classifier)
         self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
         # Backward for augmentor
