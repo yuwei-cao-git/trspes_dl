@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from common.opt_and_schedulars import get_optimizer_c, get_optimizer_a, get_lr_scheduler, get_lr_scheduler_step
 from common.loss_utils import g_loss, d_loss, calc_loss
-from torcheval.metrics.functional import r2_score
+import torchmetrics
 import numpy as np
 from pytorch_lightning.callbacks import LearningRateMonitor
 
@@ -17,8 +17,9 @@ class CombinedModel(L.LightningModule):
         if self.use_augmentor:
             self.augmentor = augmentor
         self.classifier = classifier
-        self.class_weights = torch.Tensor(np.array(self.params["train_weights"]))
         self.num_classes = len(self.params["classes"])
+        #Weighted loss
+        self.class_weights = torch.tensor(self.params["train_weights"], device="cuda", dtype=torch.float)
         self.exp_name=self.params["exp_name"]
         self.best_test_loss = np.inf
         self.triggertimes = 0
@@ -26,7 +27,19 @@ class CombinedModel(L.LightningModule):
         self.automatic_optimization=False
         self.best_test_outputs = None
         self.validation_step_outputs = []
-        # self.save_hyperparameters()
+        
+        #Metrics
+        #micro_recall = torchmetrics.Accuracy(average="micro")
+        #macro_recall = torchmetrics.Accuracy(average="macro", num_classes=self.num_classes)
+        r2 = torchmetrics.R2Score()
+
+        self.metrics = torchmetrics.MetricCollection(
+            {#"Micro Accuracy":micro_recall,
+             #"Macro Accuracy":macro_recall,
+             "R2 Accuracy": r2
+             })
+
+        self.save_hyperparameters(ignore=["loss_weight"])
 
     def forward(self, x, noise=None):
         if noise != None:
@@ -41,73 +54,50 @@ class CombinedModel(L.LightningModule):
 
     def training_step(self, batch, batch_idx):
         data, target = batch
-        data, target = (data.cuda(), target.cuda().squeeze())
+        data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
-        if self.use_augmentor:
-            # Augmentor forward pass
-            opt_c, opt_a = self.optimizers()
+        
+        # Augmentor forward pass
+        opt_c, opt_a = self.optimizers()
 
-            noise = (0.02 * torch.randn(data.size(0), 1024)).cuda()
-            # Classifier forward pass for both original and augmented data
-            
-            logits_data, logits_aug_data, aug_data = self(data, noise)
+        noise = (0.02 * torch.randn(data.size(0), 1024, device="cuda"))
+        # Classifier forward pass for both original and augmented data
+        
+        logits_data, logits_aug_data, aug_data = self(data, noise)
 
-            # Compute losses
-            loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights.cuda())
-            train_r2 = r2_score(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
-            self.manual_backward(loss_augmentor, retain_graph=True)
+        # Compute losses
+        loss_augmentor = g_loss(target, logits_data, logits_aug_data, data, aug_data, self.class_weights)
+        train_r2 = torchmetrics.functional.r2_score(torch.round(F.softmax(logits_data, dim=1).flatten(), decimals=2), target.flatten())
+        self.manual_backward(loss_augmentor, retain_graph=True)
 
-            loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights.cuda())
-            self.manual_backward(loss_classifier)
-            self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
-            # Backward for augmentor
-            opt_a.step()  # Update augmentor parameters
-            opt_a.zero_grad()
-            # Backward for classifier
-            opt_c.step()
-            opt_c.zero_grad()
-            
-            return {
-                'class_loss': loss_classifier, 
-                "aug_loss": loss_augmentor,  # Example output
-                "data": data,  # Original point cloud
-                "aug_data": aug_data,  # Augmented point cloud
-            }
-            
-        else:
-            opt_c = self.optimizers()
-            # Classifier forward pass for original data only
-            logits_data = self(data, None)
-            
-            # Compute loss
-            loss_classifier = calc_loss(target, logits_data, self.class_weights.cuda())
-
-            # Backward for classifier
-            opt_c.zero_grad()
-            self.manual_backward(loss_classifier)
-            self.log('loss_classifier', loss_classifier, on_step=True, on_epoch=True, prog_bar=True, logger=True)
-            opt_c.step()  # Update classifier parametersv
-
-            return {'class_loss': loss_classifier}  # Return loss for logging
+        loss_classifier = d_loss(target, logits_data, logits_aug_data, self.class_weights)
+        self.manual_backward(loss_classifier)
+        self.log_dict({"loss_classifier": loss_classifier, "loss_augmentor": loss_augmentor, "train_r2": train_r2}, prog_bar=True)
+        # Backward for augmentor
+        opt_a.step()  # Update augmentor parameters
+        opt_a.zero_grad()
+        # Backward for classifier
+        opt_c.step()
+        opt_c.zero_grad()
+        
+        return {
+            'class_loss': loss_classifier, 
+            "aug_loss": loss_augmentor,  # Example output
+            "data": data,  # Original point cloud
+            "aug_data": aug_data,  # Augmented point cloud
+        }
     
     def on_train_epoch_end(self):
         # Aggregate predictions and targets
-
-        if self.use_augmentor:
-            # multiple schedulers
-            sch_a, sch_c = self.lr_schedulers()
-            self.lr_scheduler_step(sch_a, self.trainer.callback_metrics["val_loss"])
-            self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
-            self.log('lr_aug', sch_a.optimizer.param_groups[0]['lr'])
-            self.log('lr_cla', sch_c.optimizer.param_groups[0]['lr'])
-        else:
-            sch_c = self.lr_schedulers()
-            self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
-            self.log('lr_cla', sch_c.optimizer.param_groups[0]['lr'])
+        sch_a, sch_c = self.lr_schedulers()
+        self.lr_scheduler_step(sch_a, self.trainer.callback_metrics["val_loss"])
+        self.lr_scheduler_step(sch_c, self.trainer.callback_metrics["val_loss"])
+        self.log('lr_aug', sch_a.optimizer.param_groups[0]['lr'])
+        self.log('lr_cla', sch_c.optimizer.param_groups[0]['lr'])
     
     def validation_step(self, batch, batch_idx):
         data, target = batch
-        data, target = (data.cuda(), target.cuda().squeeze())
+        data, target = (data, target.squeeze())
         data = data.permute(0, 2, 1)
         # Forward pass
         logits_data = self(data, None)
@@ -129,7 +119,7 @@ class CombinedModel(L.LightningModule):
         self.log_dict({"test batch size": test_true.shape[0], "pred batch size": test_pred.shape[0]})
         test_pred = torch.round(test_pred.flatten(), decimals=2)
         test_true = test_true.flatten()
-        self.log("ave_val_r2", r2_score(test_pred, test_true))
+        self.log("ave_val_r2", torchmetrics.functional.r2_score(test_pred, test_true))
 
         if last_epoch_val_loss > self.best_test_loss:
             self.triggertimes += 1
