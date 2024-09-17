@@ -63,7 +63,7 @@ echo "r$SLURM_NODEID Launching test dl cc script"
 # 3mins so far
 
 # Log experiment variables
-wandb login df8a833b419940bc3a6d3e5e04857fe61bb72eef
+wandb login xxx
 
 #Run python script
 # The $((SLURM_NTASKS_PER_NODE * SLURM_JOB_NUM_NODES)) variable tells the script how many processes are available for this execution. “srun” executes the script <tasks-per-node * nodes> times
