@@ -115,17 +115,15 @@ pip install --no-index wandb
 cd $project/trspes_dl
 git pull
 cd Pytorch/models/PointAugment
-
 module purge
 module load python/3.10 scipy-stack
 source ~/venv/bin/activate
-
 $ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=32G --ntasks=2
-
 # Set environment variables
 export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
 export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MASTER_ADDR environment variable.
-
+```
+```
 vi utils/train_ddp
 # wandb.login()
 # world_size=
@@ -134,7 +132,8 @@ world_size=2
 local_size=2
 # num_workers..
 num_workers=8
-
+```
+```
 wandb offline
 python main_ddp.py --init_method tcp://$MASTER_ADDR:34567 --batch_size 8
 ```
