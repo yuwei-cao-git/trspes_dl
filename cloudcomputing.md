@@ -89,13 +89,14 @@ $ module purge
 [name@server ~]$ virtualenv --no-download $ENVDIR
 [name@server ~]$ source $ENVDIR/bin/activate
 [name@server ~]$ pip install --no-index --upgrade pip
-[name@server ~]$ pip install --no-index 
+[name@server ~]$ pip install --no-index torch torchaudio pytorch_lightning lightning 
 [name@server ~]$ pip freeze --local > requirements.txt
 [name@server ~]$ deactivate
 [name@server ~]$ rm -rf $ENVDIR
 
 ```
-6. Use `$SLURM_TMPDIR` when runing a job!
+
+7. Use `$SLURM_TMPDIR` when runing a job!
 > using **git** to download code, specifically:
 ```
 cd $SLURM_TEMDIR
@@ -105,12 +106,12 @@ git clone git@github.com:yuwei-cao-git/trspes_dl.git
 cd trespecs_dl
 mkdir -p data/output
 tar -xf $project/data/*.tar -C ./data/
-
 pip install --no-index wandb
 ``` 
 
-7. Test in interactive run first!
+8. Test in interactive run first!
 
+```
 cd $project/trspes_dl
 git pull
 cd Pytorch/models/PointAugment
@@ -120,7 +121,7 @@ module load python/3.10 scipy-stack
 source ~/venv/bin/activate
 
 $ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=32G --ntasks=2
-```
+
 # Set environment variables
 export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
 export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MASTER_ADDR environment variable.
