@@ -72,9 +72,11 @@
    $ virtualenv -p /usr/bin/python3 venv
    ```
 - install packages
+
 ```
 pip3 install torch torchvision torchaudio scikit-learn tqdm
 pip install ...
+
 ```
 - test with code
 
@@ -89,8 +91,7 @@ $ module purge
 [name@server ~]$ virtualenv --no-download $ENVDIR
 [name@server ~]$ source $ENVDIR/bin/activate
 [name@server ~]$ pip install --no-index --upgrade pip
-[name@server ~]$ pip install --no-index torch torchaudio pytorch_lightning lightning 
-[name@server ~]$ pip freeze --local > requirements.txt
+[name@server ~]$ pip install --no-index requirements.txt
 [name@server ~]$ deactivate
 [name@server ~]$ rm -rf $ENVDIR
 
@@ -98,6 +99,7 @@ $ module purge
 
 7. Use `$SLURM_TMPDIR` when runing a job!
 > using **git** to download code, specifically:
+
 ```
 cd $SLURM_TEMDIR
 mkdir work
@@ -107,9 +109,12 @@ cd trespecs_dl
 mkdir -p data/output
 tar -xf $project/data/*.tar -C ./data/
 pip install --no-index wandb
+
 ``` 
 
-8. Test in interactive run first!
+7. Test in interactive run first!
+
+```
 
 ```
 cd $project/trspes_dl
@@ -119,6 +124,7 @@ module purge
 module load python/3.10 scipy-stack
 source ~/venv/bin/activate
 $ salloc --time=1:0:0 --gpus=2 --mem-per-gpu=32G --ntasks=2
+
 # Set environment variables
 export TORCH_NCCL_BLOCKING_WAIT=1  #Set this environment variable if you wish to use the NCCL backend for inter-GPU communication.
 export MASTER_ADDR=$(hostname) #Store the master node’s IP address in the MASTER_ADDR environment variable.
@@ -136,6 +142,8 @@ num_workers=8
 ```
 wandb offline
 python main_ddp.py --init_method tcp://$MASTER_ADDR:34567 --batch_size 8
+
 ```
 after finish:
-wandb sync ./wandb/offline-run-*
+
+`wandb sync ./wandb/offline-run-*`
