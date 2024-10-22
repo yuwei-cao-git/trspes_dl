@@ -99,6 +99,8 @@ class CombinedModel(L.LightningModule):
         data = data.permute(0, 2, 1)
         # Forward pass
         logits_data = self(data, None)
+        print(target.shape)
+        print(logits_data.shape)
         # Compute cross-entropy loss why not cross_entropy loss?
         preds = F.softmax(logits_data, dim=1)
         loss = F.mse_loss(preds, target)

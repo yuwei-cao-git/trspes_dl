@@ -148,9 +148,9 @@ def main(params):
 
     if model.best_test_outputs is not None:
         test_true, test_pred = model.best_test_outputs
-        test_pred=test_pred.detach().cpu().numpy()
-        test_true=test_true.detach().cpu().numpy()
-        r2_score=r2_score(test_true,test_pred)
+        test_pred = test_pred.detach().cpu().numpy()
+        test_true = test_true.detach().cpu().numpy()
+        r2_score = r2_score(test_true,test_pred)
         wandb.log({"sk_r2": r2_score})
         create_comp_csv(
             test_true,
@@ -171,10 +171,10 @@ if __name__ == "__main__":
         "augmentor": True,
         "batch_size": args.batch_size,  # batch size
         "train_weights": class_weights,  # training weights
-        "train_path": r"../../data/rmf_laz/train",
-        "train_pickle": r"../../data/rmf_laz/train/plots_comp.pkl",
-        "test_path": r"../../data/rmf_laz/val",
-        "test_pickle": r"../../data/rmf_laz/val/plots_comp.pkl",
+        "train_path": r"/mnt/g/rmf/dgcnn_spl/rmf_laz/train",
+        "train_pickle": r"/mnt/g/rmf/dgcnn_spl/rmf_laz/train/plots_comp.pkl",
+        "test_path": r"/mnt/g/rmf/dgcnn_spl/rmf_laz/val",
+        "test_pickle": r"/mnt/g/rmf/dgcnn_spl/rmf_laz/val/plots_comp.pkl",
         "augment": True,  # augment
         "n_augs": 2,  # number of augmentations
         "classes": ["BF", "BW", "CE", "LA", "PT", "PJ", "PO", "SB", "SW"],  # classes
